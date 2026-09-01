@@ -15,7 +15,7 @@ const submit=()=>form.post('/pendaftaran',{forceFormData:true,preserveScroll:tru
   <Head title="Pendaftaran PMB" />
   <main class="islamic-gradient-page min-h-screen px-4 py-10">
     <section class="mx-auto max-w-4xl">
-      <div class="mb-7 text-center"><a href="/" class="inline-flex"><img src="/images/logo-pku-mui-jakarta.png" alt="Pendidikan Kader Ulama MUI Provinsi DKI Jakarta" class="h-16 max-w-full object-contain" /></a></div>
+      <div class="mb-7 text-center"><a href="/" class="inline-flex"><img src="/images/logo-footer-pku.png" alt="Pendidikan Kader Ulama MUI Provinsi DKI Jakarta" class="h-16 max-w-full rounded-md object-contain" /></a></div>
 
       <div class="islamic-glass-card mb-7 rounded-2xl p-5">
         <div class="relative flex justify-between"><div class="absolute left-[12%] right-[12%] top-5 h-1 bg-slate-100"><div class="h-full bg-[#d4af37] transition-all duration-500" :style="{width:`${(step-1)*50}%`}"></div></div><div v-for="(label,i) in ['Data Diri','Dokumen','Pembayaran']" :key="label" class="relative z-10 flex w-1/3 flex-col items-center"><span class="grid h-10 w-10 place-items-center rounded-full text-sm font-black transition" :class="step>=i+1?'bg-[#064e3b] text-white ring-4 ring-emerald-100':'bg-slate-100 text-slate-400'">{{i+1}}</span><span class="mt-2 text-center text-xs font-bold sm:text-sm" :class="step>=i+1?'text-[#064e3b]':'text-slate-400'">{{label}}</span></div></div>
