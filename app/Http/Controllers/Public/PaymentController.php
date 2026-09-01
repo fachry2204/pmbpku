@@ -59,7 +59,7 @@ class PaymentController extends Controller
             'response_payload_redacted' => array_intersect_key($remote, array_flip(['merchantCode','reference','paymentUrl','vaNumber','amount','statusCode','statusMessage'])),
         ]));
         $applicant->update(['payment_status' => 'pending']);
-        if (! $payment->checkout_url) throw ValidationException::withMessages(['method' => 'Duitku tidak mengembalikan URL pembayaran.']);
+        if (! $payment->checkout_url) throw ValidationException::withMessages(['method' => 'Tautan pembayaran belum tersedia. Silakan coba kembali.']);
         return redirect()->away($payment->checkout_url);
     }
 
