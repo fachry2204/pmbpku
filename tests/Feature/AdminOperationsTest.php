@@ -27,12 +27,18 @@ class AdminOperationsTest extends TestCase
         $this->assertTrue($admin->fresh()->is_active);
     }
 
-    public function test_score_page_only_contains_accepted_applicants(): void
+    public function test_score_page_contains_applicants_attending_selection_and_accepted(): void
     {
         $admin = User::factory()->create(['role' => 'admin_pmb', 'is_active' => true]);
+        $attending = $this->applicant('attending_test');
         $passed = $this->applicant('passed');
+        $this->applicant('scheduled');
         $this->applicant('not_passed');
-        $this->actingAs($admin)->get('/admin/applicant-scores')->assertOk()->assertInertia(fn (Assert $page) => $page->component('Admin/ApplicantScores/Index')->has('applicants.data', 1)->where('applicants.data.0.id', $passed->id));
+        $this->actingAs($admin)->get('/admin/applicant-scores')->assertOk()->assertInertia(
+            fn (Assert $page) => $page->component('Admin/ApplicantScores/Index')
+                ->has('applicants.data', 2)
+                ->where('applicants.data', fn ($applicants) => collect($applicants)->pluck('id')->sort()->values()->all() === collect([$attending->id, $passed->id])->sort()->values()->all())
+        );
     }
 
     public function test_admin_can_save_four_scores(): void
@@ -41,6 +47,34 @@ class AdminOperationsTest extends TestCase
         $passed = $this->applicant();
         $this->actingAs($admin)->patch("/admin/applicant-scores/{$passed->id}", ['score_1' => 80, 'score_2' => 90, 'score_3' => 70, 'score_4' => 100])->assertSessionHasNoErrors();
         $this->assertDatabaseHas('applicant_scores', ['applicant_id' => $passed->id, 'score_1' => 80, 'score_4' => 100]);
+    }
+
+    public function test_score_page_can_be_filtered_by_registration_year(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin_pmb', 'is_active' => true]);
+        $applicant = $this->applicant('attending_test');
+        $year = $applicant->admissionPeriod->year;
+
+        $this->actingAs($admin)->get('/admin/applicant-scores?registration_year='.$year)->assertOk()->assertInertia(
+            fn (Assert $page) => $page->has('applicants.data', 1)
+                ->where('applicants.data.0.id', $applicant->id)
+                ->where('filters.registration_year', (string) $year)
+                ->where('registrationYears.0', $year)
+        );
+
+        $this->actingAs($admin)->get('/admin/applicant-scores?registration_year='.($year - 1))->assertOk()->assertInertia(
+            fn (Assert $page) => $page->has('applicants.data', 0)
+        );
+    }
+
+    public function test_admin_can_score_applicant_who_is_attending_selection(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin_pmb', 'is_active' => true]);
+        $applicant = $this->applicant('attending_test');
+
+        $this->actingAs($admin)->patch("/admin/applicant-scores/{$applicant->id}", ['score_1' => 80, 'score_2' => 90, 'score_3' => 70, 'score_4' => 100])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('applicant_scores', ['applicant_id' => $applicant->id, 'score_1' => 80, 'score_4' => 100]);
     }
 
     public function test_score_page_uses_configured_weights_for_final_score(): void

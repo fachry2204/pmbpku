@@ -24,6 +24,7 @@ Route::prefix('admin')->middleware(['auth', 'active.admin:admin_pmb,finance,revi
     Route::get('/documents/{document}/download', PrivateDocumentController::class)->name('admin.documents.download')->middleware('active.admin:admin_pmb,reviewer');
     Route::patch('/applicants/{applicant}/documents/{document}', [DocumentReviewController::class, 'update'])->name('admin.documents.review')->middleware('active.admin:admin_pmb,reviewer');
     Route::middleware('active.admin:admin_pmb')->group(function () {
+        Route::post('/applicants/bulk-schedule', [ApplicantController::class, 'bulkSchedule'])->name('admin.applicants.bulk-schedule');
         Route::get('/applicants/{applicant}/edit', [ApplicantController::class, 'edit'])->name('admin.applicants.edit');
         Route::put('/applicants/{applicant}', [ApplicantController::class, 'update'])->name('admin.applicants.update');
         Route::delete('/applicants/{applicant}', [ApplicantController::class, 'destroy'])->name('admin.applicants.destroy');

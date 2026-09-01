@@ -30,8 +30,8 @@ const active = (href: string) => href === '/admin/dashboard' ? current.value.sta
       <div class="flex-1 overflow-y-auto px-3 py-5">
         <p class="px-3 pb-2 text-[11px] font-bold uppercase tracking-widest text-slate-400">Admin</p>
         <nav class="space-y-1">
-          <Link v-for="([label,href,path]) in menus" :key="href" :href="href" :class="active(href) ? 'bg-[#16866d] text-white shadow-md shadow-emerald-900/15' : 'text-slate-600 hover:bg-emerald-50 hover:text-[#087154]'" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition" @click="open=false">
-            <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path :d="path" /></svg>{{label}}
+          <Link v-for="([label,href,path]) in menus" :key="href" :href="href" :class="active(href) ? 'bg-[#16866d] text-white shadow-md shadow-emerald-900/15' : 'text-slate-700 hover:bg-emerald-50 hover:text-[#087154]'" class="flex items-center gap-3 rounded-xl px-4 py-2.5 text-[13px] font-semibold transition" @click="open=false">
+            <svg class="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path :d="path" /></svg>{{label}}
           </Link>
         </nav>
       </div>
@@ -49,4 +49,54 @@ const active = (href: string) => href === '/admin/dashboard' ? current.value.sta
 
 <style scoped>
 .admin-page :deep(main.min-h-screen){min-height:calc(100vh - 5rem);background:transparent}
+
+/* Skala tipografi admin dibuat lebih padat dan konsisten lintas halaman. */
+.admin-page {
+  color: #334155;
+  font-size: 14px;
+}
+.admin-page :deep(.text-5xl) { font-size: 2rem !important; line-height: 2.35rem !important; }
+.admin-page :deep(.text-4xl) { font-size: 1.75rem !important; line-height: 2.1rem !important; }
+.admin-page :deep(.text-3xl) { font-size: 1.5rem !important; line-height: 1.9rem !important; }
+.admin-page :deep(.text-2xl) { font-size: 1.25rem !important; line-height: 1.65rem !important; }
+.admin-page :deep(.text-xl) { font-size: 1.08rem !important; line-height: 1.5rem !important; }
+.admin-page :deep(.text-lg) { font-size: .95rem !important; line-height: 1.4rem !important; }
+.admin-page :deep(.text-base) { font-size: .875rem !important; line-height: 1.35rem !important; }
+.admin-page :deep(.text-sm) { font-size: .79rem !important; line-height: 1.25rem !important; }
+.admin-page :deep(.text-xs) { font-size: .7rem !important; line-height: 1.05rem !important; }
+
+/* Muted text tetap terbaca di permukaan putih dan slate muda. */
+.admin-page :deep(.text-slate-400) { color: #64748b !important; }
+.admin-page :deep(.text-slate-500) { color: #475569 !important; }
+.admin-page :deep(.text-slate-600) { color: #334155 !important; }
+.admin-page :deep(.text-gray-400) { color: #6b7280 !important; }
+.admin-page :deep(.text-gray-500) { color: #4b5563 !important; }
+
+.admin-page :deep(input),
+.admin-page :deep(select),
+.admin-page :deep(textarea),
+.admin-page :deep(button) {
+  font-size: .79rem;
+  line-height: 1.2rem;
+}
+.admin-page :deep(table) { font-size: .76rem; line-height: 1.15rem; }
+.admin-page :deep(th) { font-size: .7rem; letter-spacing: .01em; }
+.admin-page :deep(label),
+.admin-page :deep(legend) { color: #334155; }
+
+/* Teks pembuka berada langsung di atas background hijau tua. */
+.admin-page :deep(main > section > p.text-slate-500),
+.admin-page :deep(main > section > p.text-slate-600),
+.admin-page :deep(main > section > div:first-child > p.text-slate-500),
+.admin-page :deep(main > section > div:first-child > p.text-slate-600),
+.admin-page :deep(main > section > div:first-child > div > p.text-slate-500),
+.admin-page :deep(main > section > div:first-child > div > p.text-slate-600) {
+  color: #d7e7e1 !important;
+}
+
+@media (max-width: 640px) {
+  .admin-page :deep(.text-5xl),
+  .admin-page :deep(.text-4xl) { font-size: 1.65rem !important; line-height: 2rem !important; }
+  .admin-page :deep(.text-3xl) { font-size: 1.35rem !important; line-height: 1.7rem !important; }
+}
 </style>

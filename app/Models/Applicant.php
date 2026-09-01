@@ -69,4 +69,11 @@ class Applicant extends Model
     {
         return $this->hasOne(ApplicantScore::class);
     }
+
+    public function testSessions()
+    {
+        return $this->belongsToMany(TestSession::class, 'applicant_test_sessions')
+            ->withPivot(['attendance_status', 'score', 'internal_note', 'assigned_at', 'attended_at'])
+            ->withTimestamps();
+    }
 }

@@ -6,11 +6,14 @@ use App\Enums\DocumentStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\SelectionStatus;
 use App\Http\Controllers\Controller;
+use App\Models\AdmissionPeriod;
 use App\Models\Applicant;
+use App\Models\TestSession;
 use App\Services\RcloneStorageService;
 use App\Support\IndonesianPhone;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -24,7 +27,7 @@ class ApplicantController extends Controller
 {
     public function index(Request $request): Response
     {
-        $query = Applicant::query();
+        $query = Applicant::with(['testSessions' => fn ($query) => $query->latest('starts_at')]);
         if ($search = $request->string('search')->trim()->toString()) {
             $query->where(fn ($q) => $q->where('registration_number', 'like', "%{$search}%")->orWhere('full_name', 'like', "%{$search}%"));
         }foreach (['payment_status', 'document_status', 'selection_status'] as $field) {
@@ -32,8 +35,15 @@ class ApplicantController extends Controller
                 $query->where($field, $request->input($field));
             }
         }
+        if ($request->filled('registration_year')) {
+            $query->whereHas('admissionPeriod', fn ($period) => $period->where('year', $request->integer('registration_year')));
+        }
 
-        return Inertia::render('Admin/Applicants/Index', ['applicants' => $query->latest()->paginate(20)->withQueryString(), 'filters' => $request->only(['search', 'payment_status', 'document_status', 'selection_status'])]);
+        return Inertia::render('Admin/Applicants/Index', [
+            'applicants' => $query->latest()->paginate(20)->withQueryString(),
+            'filters' => $request->only(['search', 'payment_status', 'document_status', 'selection_status', 'registration_year']),
+            'registrationYears' => AdmissionPeriod::query()->distinct()->orderByDesc('year')->pluck('year'),
+        ]);
     }
 
     public function show(Applicant $applicant): Response
@@ -65,6 +75,8 @@ class ApplicantController extends Controller
             'dimension' => ['required', Rule::in(['payment', 'document', 'selection'])],
             'status' => ['required', 'string', 'max:30'],
             'reason' => ['nullable', 'string', 'max:1000'],
+            'selection_date' => ['nullable', 'required_if:status,scheduled', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'selection_time' => ['nullable', 'required_if:status,scheduled', 'date_format:H:i'],
         ]);
         $data['reason'] ??= null;
 
@@ -105,7 +117,26 @@ class ApplicantController extends Controller
             }
             $locked->update($changes);
 
-            $note = $data['reason'] ?: 'Perubahan status manual melalui Data Pendaftar';
+            if ($data['dimension'] === 'selection' && $data['status'] === SelectionStatus::Scheduled->value) {
+                $startsAt = Carbon::createFromFormat(
+                    'Y-m-d H:i',
+                    $data['selection_date'].' '.$data['selection_time'],
+                    config('app.timezone')
+                );
+                $session = TestSession::create([
+                    'admission_period_id' => $locked->admission_period_id,
+                    'name' => 'Seleksi '.$locked->registration_number,
+                    'starts_at' => $startsAt,
+                ]);
+                $session->applicants()->attach($locked->id, [
+                    'attendance_status' => 'assigned',
+                    'assigned_at' => now(),
+                ]);
+            }
+
+            $note = $data['reason'] ?: ($data['status'] === SelectionStatus::Scheduled->value
+                ? 'Seleksi dijadwalkan pada '.Carbon::parse($data['selection_date'].' '.$data['selection_time'])->format('d/m/Y H:i')
+                : 'Perubahan status manual melalui Data Pendaftar');
             DB::table('status_histories')->insert([
                 'applicant_id' => $locked->id,
                 'dimension' => $data['dimension'],
@@ -130,6 +161,79 @@ class ApplicantController extends Controller
         });
 
         return back()->with('success', 'Status '.$data['dimension'].' berhasil diperbarui.');
+    }
+
+    public function bulkSchedule(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'applicant_ids' => ['required', 'array', 'min:1', 'max:500'],
+            'applicant_ids.*' => ['required', 'ulid', 'distinct', 'exists:applicants,id'],
+            'selection_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'selection_time' => ['required', 'date_format:H:i'],
+        ]);
+        $startsAt = Carbon::createFromFormat(
+            'Y-m-d H:i',
+            $data['selection_date'].' '.$data['selection_time'],
+            config('app.timezone')
+        );
+
+        DB::transaction(function () use ($request, $data, $startsAt): void {
+            $applicants = Applicant::whereIn('id', $data['applicant_ids'])->lockForUpdate()->get();
+            $invalid = $applicants->reject(fn (Applicant $applicant) => in_array(
+                $applicant->selection_status,
+                [SelectionStatus::NotScheduled, SelectionStatus::Scheduled],
+                true
+            ));
+            if ($invalid->isNotEmpty()) {
+                throw ValidationException::withMessages([
+                    'applicant_ids' => 'Peserta yang sudah mengikuti atau menyelesaikan seleksi tidak dapat dijadwalkan ulang: '.$invalid->pluck('registration_number')->join(', '),
+                ]);
+            }
+
+            foreach ($applicants->groupBy('admission_period_id') as $periodId => $group) {
+                $session = TestSession::create([
+                    'admission_period_id' => $periodId,
+                    'name' => 'Seleksi '.$startsAt->format('d/m/Y H:i'),
+                    'starts_at' => $startsAt,
+                ]);
+                $session->applicants()->attach($group->mapWithKeys(fn (Applicant $applicant) => [
+                    $applicant->id => [
+                        'attendance_status' => 'assigned',
+                        'assigned_at' => now(),
+                    ],
+                ])->all());
+            }
+
+            foreach ($applicants as $applicant) {
+                $before = $applicant->selection_status->value;
+                if ($before !== SelectionStatus::Scheduled->value) {
+                    $applicant->update(['selection_status' => SelectionStatus::Scheduled]);
+                    DB::table('status_histories')->insert([
+                        'applicant_id' => $applicant->id,
+                        'dimension' => 'selection',
+                        'from_status' => $before,
+                        'to_status' => SelectionStatus::Scheduled->value,
+                        'note' => 'Seleksi dijadwalkan massal pada '.$startsAt->format('d/m/Y H:i'),
+                        'changed_by_type' => 'user',
+                        'changed_by_id' => $request->user()->id,
+                        'created_at' => now(),
+                    ]);
+                }
+                DB::table('audit_logs')->insert([
+                    'user_id' => $request->user()->id,
+                    'action' => 'applicant.selection.bulk_schedule',
+                    'auditable_type' => Applicant::class,
+                    'auditable_id' => $applicant->id,
+                    'before_json' => json_encode(['selection_status' => $before]),
+                    'after_json' => json_encode(['selection_status' => SelectionStatus::Scheduled->value, 'starts_at' => $startsAt->toIso8601String()]),
+                    'ip' => $request->ip(),
+                    'user_agent' => str($request->userAgent())->limit(500),
+                    'created_at' => now(),
+                ]);
+            }
+        });
+
+        return back()->with('success', count($data['applicant_ids']).' pendaftar berhasil dijadwalkan untuk seleksi pada '.$startsAt->format('d/m/Y H:i').'.');
     }
 
     public function download(Applicant $applicant, RcloneStorageService $drive): BinaryFileResponse

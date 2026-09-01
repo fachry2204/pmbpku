@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class ApplicantManagementTest extends TestCase
@@ -32,6 +33,22 @@ class ApplicantManagementTest extends TestCase
         $this->actingAs($this->admin())->get("/admin/applicants/{$a->id}/edit")->assertOk();
         $this->actingAs($this->admin())->put("/admin/applicants/{$a->id}", ['full_name' => 'Nama Baru', 'birth_place' => 'Bandung', 'birth_date' => '2001-02-03', 'address' => 'Alamat Baru', 'email' => 'baru@example.test', 'whatsapp' => '081222222222'])->assertRedirect("/admin/applicants/{$a->id}");
         $this->assertDatabaseHas('applicants', ['id' => $a->id, 'full_name' => 'Nama Baru', 'email' => 'baru@example.test']);
+    }
+
+    public function test_applicant_list_can_be_filtered_by_registration_year(): void
+    {
+        $applicant = $this->applicant();
+
+        $this->actingAs($this->admin())->get('/admin/applicants?registration_year=2026')->assertOk()->assertInertia(
+            fn (Assert $page) => $page->has('applicants.data', 1)
+                ->where('applicants.data.0.id', $applicant->id)
+                ->where('filters.registration_year', '2026')
+                ->where('registrationYears.0', 2026)
+        );
+
+        $this->actingAs($this->admin())->get('/admin/applicants?registration_year=2025')->assertOk()->assertInertia(
+            fn (Assert $page) => $page->has('applicants.data', 0)
+        );
     }
 
     public function test_delete_removes_applicant_and_private_files(): void
@@ -79,6 +96,67 @@ class ApplicantManagementTest extends TestCase
         ])->assertSessionHasErrors('reason');
 
         $this->assertSame('unpaid', $applicant->fresh()->payment_status->value);
+    }
+
+    public function test_scheduled_selection_requires_date_and_time(): void
+    {
+        $applicant = $this->applicant();
+
+        $this->actingAs($this->admin())->patch("/admin/applicants/{$applicant->id}/status", [
+            'dimension' => 'selection',
+            'status' => 'scheduled',
+        ])->assertSessionHasErrors(['selection_date', 'selection_time']);
+
+        $this->assertSame('not_scheduled', $applicant->fresh()->selection_status->value);
+    }
+
+    public function test_scheduled_selection_saves_date_and_time_as_a_test_session(): void
+    {
+        Queue::fake();
+        $applicant = $this->applicant();
+
+        $this->actingAs($this->admin())->patch("/admin/applicants/{$applicant->id}/status", [
+            'dimension' => 'selection',
+            'status' => 'scheduled',
+            'selection_date' => now()->addDay()->format('Y-m-d'),
+            'selection_time' => '09:30',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame('scheduled', $applicant->fresh()->selection_status->value);
+        $this->assertDatabaseHas('test_sessions', [
+            'admission_period_id' => $applicant->admission_period_id,
+            'name' => 'Seleksi '.$applicant->registration_number,
+        ]);
+        $this->assertDatabaseHas('applicant_test_sessions', [
+            'applicant_id' => $applicant->id,
+            'attendance_status' => 'assigned',
+        ]);
+    }
+
+    public function test_admin_can_bulk_schedule_selected_applicants(): void
+    {
+        Queue::fake();
+        $first = $this->applicant();
+        $second = $first->replicate(['registration_number', 'submission_uuid', 'email', 'whatsapp_normalized']);
+        $second->fill([
+            'registration_number' => 'PKU-2026-654321',
+            'submission_uuid' => fake()->uuid(),
+            'full_name' => 'Nama Kedua',
+            'email' => 'kedua@example.test',
+            'whatsapp_normalized' => '628122222222',
+        ])->save();
+
+        $this->actingAs($this->admin())->post('/admin/applicants/bulk-schedule', [
+            'applicant_ids' => [$first->id, $second->id],
+            'selection_date' => now()->addDays(2)->format('Y-m-d'),
+            'selection_time' => '13:30',
+        ])->assertSessionHasNoErrors()->assertSessionHas('success');
+
+        $this->assertSame('scheduled', $first->fresh()->selection_status->value);
+        $this->assertSame('scheduled', $second->fresh()->selection_status->value);
+        $this->assertDatabaseHas('applicant_test_sessions', ['applicant_id' => $first->id, 'attendance_status' => 'assigned']);
+        $this->assertDatabaseHas('applicant_test_sessions', ['applicant_id' => $second->id, 'attendance_status' => 'assigned']);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'applicant.selection.bulk_schedule', 'auditable_id' => $first->id]);
     }
 
     public function test_manual_payment_status_saves_the_required_reason(): void
