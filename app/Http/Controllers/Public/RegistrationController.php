@@ -11,6 +11,7 @@ use App\Services\SettingsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\{Cache,DB,Hash};
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Throwable;
@@ -21,6 +22,8 @@ class RegistrationController extends Controller {
   $applicant=DB::transaction(function()use($request,$data,$phone){
    $period=AdmissionPeriod::where('is_active',true)->lockForUpdate()->firstOrFail();
    if($existing=Applicant::where('admission_period_id',$period->id)->where('submission_uuid',$data['submission_uuid'])->first()) return $existing;
+   if(Applicant::where('admission_period_id',$period->id)->where('email',strtolower($data['email']))->exists()) throw ValidationException::withMessages(['email'=>'Email ini sudah terdaftar pada periode PMB aktif. Silakan gunakan menu Cek Status Pendaftaran.']);
+   if(Applicant::where('admission_period_id',$period->id)->where('whatsapp_normalized',$phone)->exists()) throw ValidationException::withMessages(['whatsapp'=>'Nomor WhatsApp ini sudah terdaftar pada periode PMB aktif. Silakan gunakan menu Cek Status Pendaftaran.']);
    $sequence=Applicant::where('admission_period_id',$period->id)->withTrashed()->count()+1;
    $applicant=Applicant::create(['admission_period_id'=>$period->id,'registration_number'=>sprintf('%s-%d-%06d',$period->registration_prefix,$period->year,$sequence),'submission_uuid'=>$data['submission_uuid'],'full_name'=>$data['full_name'],'birth_place'=>$data['birth_place'],'birth_date'=>$data['birth_date'],'address'=>$data['address'],'whatsapp_normalized'=>$phone,'whatsapp_display'=>$data['whatsapp'],'email'=>strtolower($data['email']),'payment_status'=>PaymentStatus::Unpaid,'document_status'=>DocumentStatus::PendingReview,'selection_status'=>SelectionStatus::NotScheduled,'consented_at'=>now(),'submitted_at'=>now(),'lookup_secret_hash'=>Hash::make(Str::random(48))]);
    foreach(['recommendation_letter','diploma','photo_4x6','identity_card','pddikti_screenshot'] as $type){$file=$request->file($type);$path=$file->storeAs('applicants/'.$applicant->id,Str::uuid().'.'.$file->guessExtension(),'local');$applicant->documents()->create(['type'=>$type,'disk'=>'local','path'=>$path,'original_name'=>$file->getClientOriginalName(),'mime_type'=>$file->getMimeType(),'extension'=>$file->guessExtension(),'size'=>$file->getSize(),'sha256'=>hash_file('sha256',$file->getRealPath())]);}

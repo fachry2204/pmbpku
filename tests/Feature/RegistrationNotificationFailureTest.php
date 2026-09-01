@@ -29,4 +29,21 @@ class RegistrationNotificationFailureTest extends TestCase
         $applicant = Applicant::firstOrFail();
         $response->assertRedirect(route('payment.show', ['registrationNumber'=>$applicant->registration_number,'method'=>'BRIVA','registered'=>1]));
     }
+
+    public function test_duplicate_email_returns_validation_error_instead_of_server_error(): void
+    {
+        Storage::fake('local');
+        $period = AdmissionPeriod::create(['name'=>'Aktif','year'=>2026,'registration_prefix'=>'PKU','starts_at'=>now()->subDay(),'ends_at'=>now()->addDay(),'registration_fee'=>250000,'is_active'=>true]);
+        Applicant::create(['admission_period_id'=>$period->id,'registration_number'=>'PKU-2026-000001','submission_uuid'=>fake()->uuid(),'full_name'=>'Pendaftar Lama','birth_place'=>'Jakarta','birth_date'=>'2000-01-01','address'=>'Alamat','whatsapp_normalized'=>'628111111111','whatsapp_display'=>'08111111111','email'=>'duplicate@example.test','payment_status'=>'unpaid','document_status'=>'pending_review','selection_status'=>'not_scheduled','consented_at'=>now(),'submitted_at'=>now()]);
+        $files = [];
+        foreach (['recommendation_letter','diploma','photo_4x6','identity_card','pddikti_screenshot'] as $type) $files[$type] = UploadedFile::fake()->image($type.'.jpg');
+
+        $this->from('/pendaftaran')->post('/pendaftaran', [...$files,
+            'submission_uuid'=>'63c1ae11-6d20-457d-9e12-9d843dc5ce63','payment_method'=>'BRIVA',
+            'full_name'=>'Pendaftar Baru','birth_place'=>'Jakarta','birth_date'=>'2000-01-01','address'=>'Alamat lengkap',
+            'whatsapp'=>'081222222222','email'=>'duplicate@example.test','consent'=>true,
+        ])->assertRedirect('/pendaftaran')->assertSessionHasErrors('email');
+
+        $this->assertDatabaseCount('applicants', 1);
+    }
 }
