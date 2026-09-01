@@ -29,7 +29,7 @@ class AppServiceProvider extends ServiceProvider
                 foreach (['duitku.mode','duitku.merchant_code','duitku.api_key','fonnte.base_url','fonnte.token'] as $key) {
                     if (($value = $settings->get($key)) !== null) config()->set('services.'.$key, $value);
                 }
-                foreach (['mail.host'=>'mail.mailers.smtp.host','mail.port'=>'mail.mailers.smtp.port','mail.username'=>'mail.mailers.smtp.username','mail.password'=>'mail.mailers.smtp.password','mail.from_address'=>'mail.from.address'] as $key=>$target) {
+                foreach (['mail.host'=>'mail.mailers.smtp.host','mail.port'=>'mail.mailers.smtp.port','mail.username'=>'mail.mailers.smtp.username','mail.password'=>'mail.mailers.smtp.password','mail.from_address'=>'mail.from.address','mail.from_name'=>'mail.from.name'] as $key=>$target) {
                     if (($value = $settings->get($key)) !== null) config()->set($target, $value);
                 }
             }

@@ -7,8 +7,10 @@ use App\Models\Setting;
 use App\Services\SettingsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class SettingsController extends Controller
 {
@@ -24,6 +26,7 @@ class SettingsController extends Controller
         'mail.username' => ['string', true],
         'mail.password' => ['string', true],
         'mail.from_address' => ['string', false],
+        'mail.from_name' => ['string', false],
     ];
 
     public function index(): Response
@@ -63,6 +66,7 @@ class SettingsController extends Controller
             'mail_username' => ['nullable', 'string', 'max:255'],
             'mail_password' => ['nullable', 'string', 'max:500'],
             'mail_from_address' => ['nullable', 'email', 'max:190'],
+            'mail_from_name' => ['nullable', 'string', 'max:190'],
         ]);
 
         foreach (self::KEYS as $key => [$type, $secret]) {
@@ -72,5 +76,23 @@ class SettingsController extends Controller
         }
 
         return back()->with('success', 'Pengaturan tersimpan.');
+    }
+
+    public function testEmail(Request $request): RedirectResponse
+    {
+        $data = $request->validate(['test_email_recipient' => ['required', 'email', 'max:190']]);
+
+        try {
+            Mail::mailer('smtp')->raw(
+                'Email percobaan berhasil dikirim. Konfigurasi SMTP PMB PKU MUI Provinsi DKI Jakarta sudah berfungsi.',
+                fn ($message) => $message->to($data['test_email_recipient'])->subject('Tes Konfigurasi Email PMB PKU')
+            );
+
+            return back()->with('success', 'Email percobaan berhasil dikirim ke '.$data['test_email_recipient'].'.');
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->with('error', 'Email gagal dikirim. Periksa host, port, username, app password, dan alamat pengirim. Detail: '.str($exception->getMessage())->limit(240));
+        }
     }
 }

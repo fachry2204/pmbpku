@@ -8,6 +8,7 @@ type Section = { title: string; description: string; accent: string; icon: strin
 const props = defineProps<{ values: Record<string, any>; callbackUrl: string; returnUrl: string }>();
 const page = usePage() as any;
 const form = useForm(Object.fromEntries(Object.entries(props.values).map(([key, value]) => [key.replaceAll('.', '_'), value])) as Record<string, any>);
+const testForm = useForm({ test_email_recipient: '' });
 const copied = ref('');
 const copyUrl = async (label: string, value: string) => {
   await navigator.clipboard.writeText(value);
@@ -34,6 +35,7 @@ const sections: Section[] = [
     { key: 'mail_username', label: 'SMTP Username', type: 'password', hint: 'Nama pengguna atau alamat email akun SMTP.' },
     { key: 'mail_password', label: 'SMTP App Password', type: 'password', hint: 'Gunakan app password, bukan password akun utama.' },
     { key: 'mail_from_address', label: 'From Address', type: 'email', hint: 'Alamat pengirim yang terlihat oleh penerima email.' },
+    { key: 'mail_from_name', label: 'Nama Pengirim', type: 'text', hint: 'Contoh: Panitia PMB Pendidikan Kader Ulama.' },
   ]},
 ];
 </script>
@@ -48,6 +50,7 @@ const sections: Section[] = [
 
       <form class="mt-7 space-y-6" @submit.prevent="form.put('/admin/settings')">
         <div v-if="page.props.flash?.success" class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 font-semibold text-emerald-800">{{ page.props.flash.success }}</div>
+        <div v-if="page.props.flash?.error" class="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800">{{ page.props.flash.error }}</div>
         <div v-if="Object.keys(form.errors).length" class="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           <b>Pengaturan belum tersimpan.</b> Periksa kolom yang ditandai merah di bawah, lalu simpan kembali.
         </div>
@@ -81,6 +84,16 @@ const sections: Section[] = [
                 <div class="mt-2 flex gap-2"><input :value="returnUrl" readonly class="min-w-0 flex-1 rounded-xl border-blue-200 bg-white px-4 py-3 font-mono text-sm text-slate-700"/><button type="button" class="shrink-0 rounded-xl border border-blue-700 px-4 text-sm font-bold text-blue-700" @click="copyUrl('return', returnUrl)">{{ copied === 'return' ? 'Tersalin ✓' : 'Salin' }}</button></div>
                 <p class="mt-2 text-xs leading-5 text-slate-500">Halaman tujuan pengguna setelah menyelesaikan proses pembayaran.</p>
               </div>
+            </div>
+          </div>
+          <div v-if="section.title === 'Email / SMTP'" class="border-t border-slate-100 bg-violet-50/50 p-6">
+            <div class="flex items-start gap-3">
+              <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-violet-100 font-black text-violet-700">✉</span>
+              <div><h3 class="font-extrabold text-slate-900">Tes Kirim Email</h3><p class="mt-1 text-sm leading-6 text-slate-500">Simpan pengaturan SMTP terlebih dahulu, lalu kirim email percobaan untuk memastikan koneksi berfungsi.</p></div>
+            </div>
+            <div class="mt-5 flex flex-col gap-3 sm:flex-row">
+              <div class="min-w-0 flex-1"><input v-model="testForm.test_email_recipient" type="email" placeholder="Alamat email tujuan pengujian" class="w-full rounded-xl border-violet-200 bg-white px-4 py-3 focus:border-violet-600 focus:ring-violet-600"/><small v-if="testForm.errors.test_email_recipient" class="mt-2 block text-xs font-semibold text-red-700">{{ testForm.errors.test_email_recipient }}</small></div>
+              <button type="button" :disabled="testForm.processing || !testForm.test_email_recipient" class="rounded-xl bg-violet-700 px-6 py-3 font-bold text-white transition hover:bg-violet-600 disabled:cursor-not-allowed disabled:opacity-50" @click="testForm.post('/admin/settings/test-email', { preserveScroll: true })">{{ testForm.processing ? 'Mengirim…' : 'Kirim Email Tes' }}</button>
             </div>
           </div>
         </section>

@@ -6,6 +6,7 @@ use App\Models\Setting;
 use App\Models\User;
 use App\Services\Duitku\DuitkuClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Testing\AssertableInertia as Assert;
 use Mockery\MockInterface;
 use Tests\TestCase;
@@ -34,9 +35,21 @@ class SettingsAndRegistrationDisplayTest extends TestCase
             'duitku_merchant_code' => 'D12345',
             'duitku_api_key' => 'secret-key',
             'mail_port' => 0,
+            'mail_from_name' => 'Panitia PMB PKU',
         ])->assertSessionHasNoErrors()->assertSessionHas('success');
 
         $this->assertDatabaseHas('settings', ['key' => 'pmb.registration_fee', 'value' => '375000']);
         $this->assertDatabaseHas('settings', ['key' => 'duitku.merchant_code', 'value' => 'D12345']);
+        $this->assertDatabaseHas('settings', ['key' => 'mail.from_name', 'value' => 'Panitia PMB PKU']);
+    }
+
+    public function test_super_admin_can_send_a_test_email(): void
+    {
+        Mail::fake();
+        $admin = User::factory()->create(['role' => 'super_admin', 'is_active' => true]);
+
+        $this->actingAs($admin)->post('/admin/settings/test-email', [
+            'test_email_recipient' => 'panitia@example.test',
+        ])->assertSessionHasNoErrors()->assertSessionHas('success');
     }
 }
