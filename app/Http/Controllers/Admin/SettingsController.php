@@ -16,6 +16,7 @@ class SettingsController extends Controller
 {
     private const KEYS = [
         'pmb.registration_fee' => ['integer', false],
+        'registration.document_upload_disabled' => ['boolean', false],
         'payment.provider' => ['string', false],
         'duitku.mode' => ['string', false],
         'duitku.merchant_code' => ['string', false],
@@ -43,7 +44,7 @@ class SettingsController extends Controller
         $unreadableSettings = [];
         foreach (self::KEYS as $key => [$type, $secret]) {
             $row = $stored->get($key);
-            $default = match ($key) { 'pmb.registration_fee' => 250000, 'payment.provider' => 'duitku', 'duitku.mode', 'tripay.mode' => 'sandbox', 'notifications.whatsapp_enabled', 'notifications.email_enabled' => true, default => '' };
+            $default = match ($key) { 'pmb.registration_fee' => 250000, 'registration.document_upload_disabled' => false, 'payment.provider' => 'duitku', 'duitku.mode', 'tripay.mode' => 'sandbox', 'notifications.whatsapp_enabled', 'notifications.email_enabled' => true, default => '' };
             try {
                 $value = $row?->getDecodedValue() ?? $default;
                 $values[$key] = $secret ? ($row ? '••••••••' : '') : ($key === 'mail.port' && (int) $value === 0 ? '' : $value);
@@ -76,6 +77,7 @@ class SettingsController extends Controller
 
         $data = $request->validate([
             'pmb_registration_fee' => ['required', 'integer', 'min:1000', 'max:100000000'],
+            'registration_document_upload_disabled' => ['required', 'boolean'],
             'payment_provider' => ['required', 'in:duitku,tripay'],
             'duitku_mode' => ['nullable', 'in:sandbox,production'],
             'duitku_merchant_code' => ['nullable', 'string', 'max:100'],

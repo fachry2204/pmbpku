@@ -56,6 +56,7 @@ class SettingsAndRegistrationDisplayTest extends TestCase
 
         $this->actingAs($admin)->put('/admin/settings', [
             'pmb_registration_fee' => 375000,
+            'registration_document_upload_disabled' => false,
             'payment_provider' => 'duitku',
             'notifications_whatsapp_enabled' => true,
             'notifications_email_enabled' => true,

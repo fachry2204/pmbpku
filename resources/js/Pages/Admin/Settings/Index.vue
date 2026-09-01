@@ -19,6 +19,7 @@ const copyUrl = async (label: string, value: string) => {
 const sections = computed<Section[]>(() => [
   { title: 'Pendaftaran', description: 'Atur biaya utama yang berlaku untuk setiap calon mahasiswa.', accent: 'bg-amber-50 text-amber-700', icon: 'Rp', fields: [
     { key: 'pmb_registration_fee', label: 'Harga Pendaftaran (Rp)', type: 'number', hint: 'Nominal biaya pendaftaran sebelum biaya layanan.' },
+    { key: 'registration_document_upload_disabled', label: 'Nonaktifkan Upload Dokumen', type: 'toggle', hint: 'Jika aktif, langkah upload dokumen disembunyikan dan dokumen tidak wajib. Jika nonaktif, semua dokumen wajib diunggah.' },
   ]},
   { title: 'Payment Gateway', description: 'Konfigurasi lingkungan dan kredensial pembayaran otomatis.', accent: 'bg-blue-50 text-blue-700', icon: 'PG', fields: [
     { key: 'payment_provider', label: 'Penyedia Payment Gateway', type: 'provider', hint: 'Pilih satu provider yang digunakan pada halaman pendaftaran.' },

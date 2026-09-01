@@ -6,6 +6,7 @@ use App\Models\{AdmissionPeriod, Applicant, Setting};
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class RegistrationNotificationFailureTest extends TestCase
@@ -45,5 +46,22 @@ class RegistrationNotificationFailureTest extends TestCase
         ])->assertRedirect('/pendaftaran')->assertSessionHasErrors('email');
 
         $this->assertDatabaseCount('applicants', 1);
+    }
+
+    public function test_registration_can_skip_documents_when_upload_is_disabled(): void
+    {
+        Storage::fake('local'); Queue::fake();
+        AdmissionPeriod::create(['name'=>'Aktif','year'=>2026,'registration_prefix'=>'PKU','starts_at'=>now()->subDay(),'ends_at'=>now()->addDay(),'registration_fee'=>250000,'is_active'=>true]);
+        Setting::create(['group'=>'registration','key'=>'registration.document_upload_disabled','value'=>'true','type'=>'boolean','is_encrypted'=>false]);
+
+        $response = $this->post('/pendaftaran', [
+            'submission_uuid'=>'9a2ff090-44f8-41ee-bb1b-ea8aec7917f8','payment_method'=>'BRIVA',
+            'full_name'=>'Tanpa Dokumen','birth_place'=>'Jakarta','birth_date'=>'2000-01-01','address'=>'Alamat lengkap',
+            'whatsapp'=>'081233344455','email'=>'nodoc@example.test','consent'=>true,
+        ]);
+
+        $applicant = Applicant::firstOrFail();
+        $response->assertRedirect(route('payment.show',['registrationNumber'=>$applicant->registration_number,'method'=>'BRIVA','registered'=>1]));
+        $this->assertDatabaseCount('applicant_documents', 0);
     }
 }
