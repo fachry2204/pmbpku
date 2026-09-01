@@ -26,6 +26,8 @@ class SettingsController extends Controller
         'tripay.private_key' => ['string', true],
         'fonnte.base_url' => ['string', false],
         'fonnte.token' => ['string', true],
+        'notifications.whatsapp_enabled' => ['boolean', false],
+        'notifications.email_enabled' => ['boolean', false],
         'mail.host' => ['string', false],
         'mail.port' => ['integer', false],
         'mail.username' => ['string', true],
@@ -41,7 +43,7 @@ class SettingsController extends Controller
         $unreadableSettings = [];
         foreach (self::KEYS as $key => [$type, $secret]) {
             $row = $stored->get($key);
-            $default = match ($key) { 'pmb.registration_fee' => 250000, 'payment.provider' => 'duitku', 'duitku.mode', 'tripay.mode' => 'sandbox', default => '' };
+            $default = match ($key) { 'pmb.registration_fee' => 250000, 'payment.provider' => 'duitku', 'duitku.mode', 'tripay.mode' => 'sandbox', 'notifications.whatsapp_enabled', 'notifications.email_enabled' => true, default => '' };
             try {
                 $value = $row?->getDecodedValue() ?? $default;
                 $values[$key] = $secret ? ($row ? '••••••••' : '') : ($key === 'mail.port' && (int) $value === 0 ? '' : $value);
@@ -84,6 +86,8 @@ class SettingsController extends Controller
             'tripay_private_key' => ['nullable', 'string', 'max:500'],
             'fonnte_base_url' => ['nullable', 'url', 'max:500'],
             'fonnte_token' => ['nullable', 'string', 'max:500'],
+            'notifications_whatsapp_enabled' => ['required', 'boolean'],
+            'notifications_email_enabled' => ['required', 'boolean'],
             'mail_host' => ['nullable', 'string', 'max:255'],
             'mail_port' => ['nullable', 'integer', 'min:1', 'max:65535'],
             'mail_username' => ['nullable', 'string', 'max:255'],

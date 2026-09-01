@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\{Cache,DB,Hash};
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 class RegistrationController extends Controller {
  public function create(PaymentGatewayService $gateway, SettingsService $settings):Response{$channels=[];$paymentError=null;$amount=(int)$settings->get('pmb.registration_fee',250000);try{$channels=Cache::remember('payment.channels.'.$gateway->provider().'.'.$gateway->mode().'.'.$amount,300,fn()=>$gateway->channels($amount));}catch(\Throwable){$paymentError='Metode pembayaran belum tersedia. Silakan hubungi panitia.';}return Inertia::render('Public/Register',['channels'=>$channels,'paymentError'=>$paymentError,'registrationFee'=>$amount]);}
  public function store(StoreApplicantRequest $request,QueueApplicantNotification $notifications):RedirectResponse {
@@ -25,7 +26,14 @@ class RegistrationController extends Controller {
    foreach(['recommendation_letter','diploma','photo_4x6','identity_card','pddikti_screenshot'] as $type){$file=$request->file($type);$path=$file->storeAs('applicants/'.$applicant->id,Str::uuid().'.'.$file->guessExtension(),'local');$applicant->documents()->create(['type'=>$type,'disk'=>'local','path'=>$path,'original_name'=>$file->getClientOriginalName(),'mime_type'=>$file->getMimeType(),'extension'=>$file->guessExtension(),'size'=>$file->getSize(),'sha256'=>hash_file('sha256',$file->getRealPath())]);}
    return $applicant;
   });
-  $notifications->execute($applicant,'registration_created',"Pendaftaran {$applicant->registration_number} berhasil diterima. Simpan nomor pendaftaran Anda.");
+  // Registration is already committed at this point. A temporary SMTP,
+  // WhatsApp, or synchronous queue failure must never turn a successfully
+  // stored registration into a 500 response for the applicant.
+  try {
+   $notifications->execute($applicant,'registration_created',"Pendaftaran {$applicant->registration_number} berhasil diterima. Simpan nomor pendaftaran Anda.");
+  } catch (Throwable $exception) {
+   report($exception);
+  }
   return redirect()->route('payment.show',['registrationNumber'=>$applicant->registration_number,'method'=>$data['payment_method'],'registered'=>1]);
  }
  public function success(string $registrationNumber):Response{$applicant=Applicant::where('registration_number',$registrationNumber)->firstOrFail();return Inertia::render('Public/Success',['applicant'=>['registration_number'=>$applicant->registration_number,'full_name'=>$applicant->full_name,'payment_status'=>$applicant->payment_status]]);}

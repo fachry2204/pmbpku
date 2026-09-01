@@ -34,10 +34,12 @@ const sections = computed<Section[]>(() => [
     ]),
   ]},
   { title: 'WhatsApp / Fonnte', description: 'Hubungkan layanan pengiriman notifikasi WhatsApp.', accent: 'bg-emerald-50 text-emerald-700', icon: 'WA', fields: [
+    { key: 'notifications_whatsapp_enabled', label: 'Aktifkan Notifikasi WhatsApp', type: 'toggle', hint: 'Jika nonaktif, sistem tidak membuat antrean atau mengirim pesan WhatsApp.' },
     { key: 'fonnte_base_url', label: 'Base URL Fonnte', type: 'url', hint: 'Alamat API utama, biasanya https://api.fonnte.com.' },
     { key: 'fonnte_token', label: 'Token Fonnte', type: 'password', hint: 'Token perangkat aktif dari dashboard Fonnte.' },
   ]},
   { title: 'Email / SMTP', description: 'Atur server email untuk pemberitahuan sistem.', accent: 'bg-violet-50 text-violet-700', icon: '@', fields: [
+    { key: 'notifications_email_enabled', label: 'Aktifkan Notifikasi Email', type: 'toggle', hint: 'Jika nonaktif, sistem tidak membuat antrean atau mengirim email otomatis.' },
     { key: 'mail_host', label: 'SMTP Host', type: 'text', hint: 'Contoh: smtp.gmail.com atau server email domain.' },
     { key: 'mail_port', label: 'SMTP Port', type: 'number', hint: 'Umumnya 587 untuk TLS atau 465 untuk SSL.' },
     { key: 'mail_username', label: 'SMTP Username', type: 'password', hint: 'Nama pengguna atau alamat email akun SMTP.' },
@@ -73,7 +75,11 @@ const sections = computed<Section[]>(() => [
           <div class="grid gap-5 p-6 md:grid-cols-2">
             <label v-for="field in section.fields" :key="field.key" class="block" :class="section.fields.length === 1 ? 'md:max-w-md' : ''">
               <span class="text-sm font-bold text-slate-700">{{ field.label }}</span>
-              <select v-if="field.type === 'provider'" v-model="form[field.key]" class="mt-2 w-full rounded-xl border-slate-300 bg-white px-4 py-3 focus:border-emerald-600 focus:ring-emerald-600"><option value="duitku">Duitku</option><option value="tripay">Tripay</option></select>
+              <label v-if="field.type === 'toggle'" class="mt-3 flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <input v-model="form[field.key]" type="checkbox" class="h-5 w-5 rounded border-slate-300 text-emerald-700 focus:ring-emerald-600" />
+                <span class="font-semibold" :class="form[field.key] ? 'text-emerald-700' : 'text-slate-500'">{{ form[field.key] ? 'Aktif' : 'Nonaktif' }}</span>
+              </label>
+              <select v-else-if="field.type === 'provider'" v-model="form[field.key]" class="mt-2 w-full rounded-xl border-slate-300 bg-white px-4 py-3 focus:border-emerald-600 focus:ring-emerald-600"><option value="duitku">Duitku</option><option value="tripay">Tripay</option></select>
               <select v-else-if="field.type === 'select'" v-model="form[field.key]" class="mt-2 w-full rounded-xl border-slate-300 bg-white px-4 py-3 focus:border-emerald-600 focus:ring-emerald-600"><option value="sandbox">Sandbox</option><option value="production">Production</option></select>
               <input v-else v-model="form[field.key]" :type="field.type" class="mt-2 w-full rounded-xl border-slate-300 bg-white px-4 py-3 focus:border-emerald-600 focus:ring-emerald-600" autocomplete="off" />
               <small v-if="field.hint" class="mt-2 block text-xs leading-5 text-slate-400">{{ field.hint }}</small>
