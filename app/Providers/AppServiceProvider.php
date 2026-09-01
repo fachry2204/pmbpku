@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Models\Applicant;
+use App\Models\ApplicantDocument;
+use App\Observers\ApplicantDocumentObserver;
 use App\Observers\ApplicantObserver;
 use App\Services\SettingsService;
 use Illuminate\Support\Facades\Schema;
@@ -25,15 +27,20 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Applicant::observe(ApplicantObserver::class);
+        ApplicantDocument::observe(ApplicantDocumentObserver::class);
         Vite::prefetch(concurrency: 3);
         try {
             if (Schema::hasTable('settings')) {
                 $settings = app(SettingsService::class);
-                foreach (['duitku.mode','duitku.merchant_code','duitku.api_key','tripay.mode','tripay.merchant_code','tripay.api_key','tripay.private_key','fonnte.base_url','fonnte.token'] as $key) {
-                    if (($value = $settings->get($key)) !== null) config()->set('services.'.$key, $value);
+                foreach (['duitku.mode', 'duitku.merchant_code', 'duitku.api_key', 'tripay.mode', 'tripay.merchant_code', 'tripay.api_key', 'tripay.private_key', 'fonnte.base_url', 'fonnte.token'] as $key) {
+                    if (($value = $settings->get($key)) !== null) {
+                        config()->set('services.'.$key, $value);
+                    }
                 }
-                foreach (['mail.host'=>'mail.mailers.smtp.host','mail.port'=>'mail.mailers.smtp.port','mail.username'=>'mail.mailers.smtp.username','mail.password'=>'mail.mailers.smtp.password','mail.from_address'=>'mail.from.address','mail.from_name'=>'mail.from.name'] as $key=>$target) {
-                    if (($value = $settings->get($key)) !== null) config()->set($target, $value);
+                foreach (['mail.host' => 'mail.mailers.smtp.host', 'mail.port' => 'mail.mailers.smtp.port', 'mail.username' => 'mail.mailers.smtp.username', 'mail.password' => 'mail.mailers.smtp.password', 'mail.from_address' => 'mail.from.address', 'mail.from_name' => 'mail.from.name'] as $key => $target) {
+                    if (($value = $settings->get($key)) !== null) {
+                        config()->set($target, $value);
+                    }
                 }
             }
         } catch (\Throwable) {

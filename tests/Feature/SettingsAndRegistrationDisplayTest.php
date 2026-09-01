@@ -50,6 +50,23 @@ class SettingsAndRegistrationDisplayTest extends TestCase
         );
     }
 
+    public function test_registration_year_can_be_saved_from_settings(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin', 'is_active' => true]);
+
+        $this->actingAs($admin)->put('/admin/settings', [
+            'pmb_registration_fee' => 250000,
+            'pmb_registration_year' => 2030,
+            'registration_document_upload_disabled' => false,
+            'payment_provider' => 'duitku',
+            'notifications_whatsapp_enabled' => true,
+            'notifications_email_enabled' => true,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('settings', ['key' => 'pmb.registration_year', 'value' => '2030']);
+        $this->get('/')->assertOk()->assertInertia(fn (Assert $page) => $page->where('registrationYear', 2030));
+    }
+
     public function test_empty_smtp_port_does_not_prevent_payment_settings_from_being_saved(): void
     {
         $admin = User::factory()->create(['role' => 'super_admin', 'is_active' => true]);
@@ -80,5 +97,27 @@ class SettingsAndRegistrationDisplayTest extends TestCase
         $this->actingAs($admin)->post('/admin/settings/test-email', [
             'test_email_recipient' => 'panitia@example.test',
         ])->assertSessionHasNoErrors()->assertSessionHas('success');
+    }
+
+    public function test_score_labels_can_be_saved_and_are_used_on_the_score_page(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin', 'is_active' => true]);
+
+        $this->actingAs($admin)->put('/admin/settings', [
+            'pmb_registration_fee' => 250000,
+            'registration_document_upload_disabled' => false,
+            'scores_label_1' => 'Tes Tulis',
+            'scores_label_2' => 'Bahasa Arab',
+            'scores_label_3' => 'Wawancara',
+            'scores_label_4' => 'Baca Kitab',
+            'payment_provider' => 'duitku',
+            'notifications_whatsapp_enabled' => true,
+            'notifications_email_enabled' => true,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('settings', ['key' => 'scores.label_1', 'value' => 'Tes Tulis']);
+        $this->actingAs($admin)->get('/admin/applicant-scores')->assertOk()->assertInertia(
+            fn (Assert $page) => $page->where('scoreLabels', ['Tes Tulis', 'Bahasa Arab', 'Wawancara', 'Baca Kitab'])
+        );
     }
 }

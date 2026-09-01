@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-defineProps<{ content: any }>();
+defineProps<{ content: any; registrationYear: number }>();
 const services=[
   {no:'01',title:'Pendaftaran Online',text:'Isi formulir dan unggah dokumen persyaratan secara aman.',href:'/pendaftaran'},
   {no:'02',title:'Cek Status',text:'Pantau pembayaran, verifikasi berkas, dan hasil seleksi.',href:'/cek-status'},
@@ -15,7 +15,7 @@ const services=[
     <div class="bg-[#054b36] text-white/85">
       <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-5 py-2 text-xs md:text-sm">
         <div class="flex gap-6"><span>◉ Pendidikan Kader Ulama</span><span class="hidden sm:inline">✦ Membina Ulama, Menguatkan Umat</span></div>
-        <div class="flex gap-5"><span>Periode PMB 2026</span><a href="#kontak" class="font-semibold text-[#e6bf55]">Hubungi Panitia</a></div>
+        <div class="flex gap-5"><span>Periode PMB {{ registrationYear }}</span><a href="#kontak" class="font-semibold text-[#e6bf55]">Hubungi Panitia</a></div>
       </div>
     </div>
 
@@ -36,7 +36,7 @@ const services=[
         <div class="hero-islamic-overlay absolute inset-0"></div>
         <div class="relative mx-auto grid min-h-[620px] max-w-7xl items-center gap-12 px-5 py-20 lg:grid-cols-[1.18fr_.82fr]">
           <div>
-            <span class="inline-flex rounded-full border border-emerald-300/20 bg-emerald-400/10 px-5 py-2 text-sm font-bold text-emerald-100">Penerimaan Mahasiswa Baru • 2026</span>
+            <span class="inline-flex rounded-full border border-emerald-300/20 bg-emerald-400/10 px-5 py-2 text-sm font-bold text-emerald-100">Penerimaan Mahasiswa Baru • {{ registrationYear }}</span>
             <h1 class="mt-7 max-w-3xl text-3xl font-extrabold leading-[1.12] tracking-tight sm:text-4xl lg:text-5xl">{{ content.hero_title }}</h1>
             <div class="mt-5 h-1.5 w-28 rounded-full bg-[#e2b93f]"></div>
             <p class="mt-7 max-w-2xl text-lg leading-8 text-emerald-50/85 md:text-xl">{{ content.hero_description }}</p>
@@ -73,7 +73,7 @@ const services=[
           </div>
         </div>
       </div>
-      <div class="border-t border-white/10 px-5 py-5 text-center text-xs text-emerald-50/50">© 2026 Pendidikan Kader Ulama. Seluruh hak dilindungi.</div>
+      <div class="border-t border-white/10 px-5 py-5 text-center text-xs text-emerald-50/50">© {{ registrationYear }} Pendidikan Kader Ulama. Seluruh hak dilindungi.</div>
     </footer>
   </div>
 </template>

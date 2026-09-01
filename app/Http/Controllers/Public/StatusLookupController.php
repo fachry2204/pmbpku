@@ -2,11 +2,17 @@
 
 namespace App\Http\Controllers\Public;
 
-use App\Models\{AdmissionPeriod, Applicant};
+use App\Models\AdmissionPeriod;
+use App\Models\Applicant;
+use App\Services\SettingsService;
 use App\Support\IndonesianPhone;
-use Illuminate\Http\{RedirectResponse, Request};
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
-use Inertia\{Inertia, Response};
+use Inertia\Inertia;
+use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StatusLookupController
 {
@@ -15,7 +21,7 @@ class StatusLookupController
         return Inertia::render('Public/StatusLookup');
     }
 
-    public function lookup(Request $request): RedirectResponse
+    public function lookup(Request $request, SettingsService $settings): RedirectResponse
     {
         $data = $request->validate([
             'identifier' => ['required', 'string', 'max:190'],
@@ -28,7 +34,9 @@ class StatusLookupController
         $applicant = null;
 
         if ($period) {
-            $query = Applicant::where('admission_period_id', $period->id);
+            $year = (int) $settings->get('pmb.registration_year', $period->year);
+            $query = Applicant::where('admission_period_id', $period->id)
+                ->where('registration_number', 'like', $period->registration_prefix.'-'.$year.'-%');
             if (str_contains($identifier, '@')) {
                 $applicant = $query->where('email', strtolower($identifier))->first();
             } else {
@@ -65,11 +73,35 @@ class StatusLookupController
             'id' => $applicant->id,
             'registration_number' => $applicant->registration_number,
             'full_name' => $applicant->full_name,
+            'photo_url' => $applicant->documents->contains('type', 'photo_4x6') ? route('status.photo') : null,
+            'registration_status' => $applicant->registration_status,
             'payment_status' => $applicant->payment_status,
             'document_status' => $applicant->document_status,
             'selection_status' => $applicant->selection_status,
             'documents' => $applicant->documents,
             'payments' => $applicant->payments,
         ]]);
+    }
+
+    public function photo(Request $request): StreamedResponse
+    {
+        $id = $request->session()->get('status_applicant_id');
+        abort_unless($id, 403);
+        $applicant = Applicant::findOrFail($id);
+        $photo = $applicant->documents()->where('type', 'photo_4x6')->latest('version')->firstOrFail();
+        abort_unless($photo->disk === 'local' && Storage::disk('local')->exists($photo->path), 404);
+        $disk = Storage::disk('local');
+
+        return response()->stream(function () use ($disk, $photo): void {
+            $stream = $disk->readStream($photo->path);
+            abort_if($stream === false, 404);
+            fpassthru($stream);
+            fclose($stream);
+        }, 200, [
+            'Content-Type' => $photo->mime_type ?: 'image/jpeg',
+            'Content-Length' => (string) $disk->size($photo->path),
+            'Cache-Control' => 'private, max-age=300',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 }

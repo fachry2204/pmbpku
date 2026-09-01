@@ -2,7 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { reactive } from 'vue';
 
-const props = defineProps<{ applicants: any; filters: { search?: string } }>();
+const props = defineProps<{ applicants: any; filters: { search?: string }; scoreLabels: string[] }>();
 const search = reactive({ value: props.filters.search || '' });
 const saving = reactive<Record<string, boolean>>({});
 
@@ -41,7 +41,7 @@ const save = (applicant: any) => {
       <div class="mt-5 overflow-x-auto rounded-2xl bg-white shadow-sm">
         <table class="w-full min-w-[980px] text-left text-sm">
           <thead class="bg-emerald-950 text-white">
-            <tr><th class="p-4">Nama Pendaftar</th><th class="p-4 text-center">Nilai 1</th><th class="p-4 text-center">Nilai 2</th><th class="p-4 text-center">Nilai 3</th><th class="p-4 text-center">Nilai 4</th><th class="p-4 text-center">Rata-Rata</th><th class="p-4 text-center">Aksi</th></tr>
+            <tr><th class="p-4">Nama Pendaftar</th><th v-for="(label, index) in scoreLabels" :key="index" class="p-4 text-center">{{ label }}</th><th class="p-4 text-center">Rata-Rata</th><th class="p-4 text-center">Aksi</th></tr>
           </thead>
           <tbody>
             <tr v-for="applicant in applicants.data" :key="applicant.id" class="border-b border-slate-100 hover:bg-emerald-50/40">

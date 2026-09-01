@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Services\RcloneStorageService;
 use App\Services\SettingsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,7 +17,17 @@ class SettingsController extends Controller
 {
     private const KEYS = [
         'pmb.registration_fee' => ['integer', false],
+        'pmb.registration_year' => ['integer', false],
         'registration.document_upload_disabled' => ['boolean', false],
+        'scores.label_1' => ['string', false],
+        'scores.label_2' => ['string', false],
+        'scores.label_3' => ['string', false],
+        'scores.label_4' => ['string', false],
+        'storage.google_drive_enabled' => ['boolean', false],
+        'rclone.binary_path' => ['string', false],
+        'rclone.remote' => ['string', false],
+        'rclone.config_path' => ['string', false],
+        'rclone.root_folder' => ['string', false],
         'payment.provider' => ['string', false],
         'duitku.mode' => ['string', false],
         'duitku.merchant_code' => ['string', false],
@@ -44,7 +55,23 @@ class SettingsController extends Controller
         $unreadableSettings = [];
         foreach (self::KEYS as $key => [$type, $secret]) {
             $row = $stored->get($key);
-            $default = match ($key) { 'pmb.registration_fee' => 250000, 'registration.document_upload_disabled' => false, 'payment.provider' => 'duitku', 'duitku.mode', 'tripay.mode' => 'sandbox', 'notifications.whatsapp_enabled', 'notifications.email_enabled' => true, default => '' };
+            $default = match ($key) {
+                'pmb.registration_fee' => 250000,
+                'pmb.registration_year' => now()->year,
+                'registration.document_upload_disabled' => false,
+                'scores.label_1' => 'Nilai 1',
+                'scores.label_2' => 'Nilai 2',
+                'scores.label_3' => 'Nilai 3',
+                'scores.label_4' => 'Nilai 4',
+                'storage.google_drive_enabled' => false,
+                'rclone.binary_path' => '/usr/local/bin/rclone',
+                'rclone.remote' => 'gdrive',
+                'rclone.root_folder' => 'PMB-PKU',
+                'payment.provider' => 'duitku',
+                'duitku.mode', 'tripay.mode' => 'sandbox',
+                'notifications.whatsapp_enabled', 'notifications.email_enabled' => true,
+                default => '',
+            };
             try {
                 $value = $row?->getDecodedValue() ?? $default;
                 $values[$key] = $secret ? ($row ? '••••••••' : '') : ($key === 'mail.port' && (int) $value === 0 ? '' : $value);
@@ -56,6 +83,7 @@ class SettingsController extends Controller
                 $unreadableSettings[] = $key;
             }
         }
+
         return Inertia::render('Admin/Settings/Index', [
             'values' => $values,
             'callbackUrl' => route('webhooks.duitku'),
@@ -77,7 +105,17 @@ class SettingsController extends Controller
 
         $data = $request->validate([
             'pmb_registration_fee' => ['required', 'integer', 'min:1000', 'max:100000000'],
+            'pmb_registration_year' => ['sometimes', 'required', 'integer', 'min:2020', 'max:2100'],
             'registration_document_upload_disabled' => ['required', 'boolean'],
+            'scores_label_1' => ['sometimes', 'required', 'string', 'max:80'],
+            'scores_label_2' => ['sometimes', 'required', 'string', 'max:80'],
+            'scores_label_3' => ['sometimes', 'required', 'string', 'max:80'],
+            'scores_label_4' => ['sometimes', 'required', 'string', 'max:80'],
+            'storage_google_drive_enabled' => ['sometimes', 'required', 'boolean'],
+            'rclone_binary_path' => ['nullable', 'string', 'max:500'],
+            'rclone_remote' => ['nullable', 'regex:/^[A-Za-z0-9_-]+$/', 'max:100'],
+            'rclone_config_path' => ['nullable', 'string', 'max:500'],
+            'rclone_root_folder' => ['nullable', 'string', 'max:200'],
             'payment_provider' => ['required', 'in:duitku,tripay'],
             'duitku_mode' => ['nullable', 'in:sandbox,production'],
             'duitku_merchant_code' => ['nullable', 'string', 'max:100'],
@@ -100,7 +138,9 @@ class SettingsController extends Controller
 
         foreach (self::KEYS as $key => [$type, $secret]) {
             $input = str_replace('.', '_', $key);
-            if (! array_key_exists($input, $data) || ($secret && blank($data[$input])) || $data[$input] === '••••••••') continue;
+            if (! array_key_exists($input, $data) || ($secret && blank($data[$input])) || $data[$input] === '••••••••') {
+                continue;
+            }
             $settings->put(strtok($key, '.'), $key, $data[$input], $type, $secret);
         }
 
@@ -122,6 +162,19 @@ class SettingsController extends Controller
             report($exception);
 
             return back()->with('error', 'Email gagal dikirim. Periksa host, port, username, app password, dan alamat pengirim. Detail: '.str($exception->getMessage())->limit(240));
+        }
+    }
+
+    public function testDrive(RcloneStorageService $drive): RedirectResponse
+    {
+        try {
+            $drive->testConnection();
+
+            return back()->with('success', 'Koneksi rclone ke Google Drive berhasil.');
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->with('error', 'Koneksi Google Drive gagal. Periksa lokasi rclone, config, dan nama remote. Detail: '.str($exception->getMessage())->limit(240));
         }
     }
 }

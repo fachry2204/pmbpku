@@ -3,14 +3,18 @@
 namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Applicant, Payment};
-use App\Services\SettingsService;
+use App\Models\Applicant;
+use App\Models\Payment;
 use App\Services\PaymentGatewayService;
-use Illuminate\Http\{RedirectResponse, Request};
-use Illuminate\Support\Facades\{Cache, DB};
+use App\Services\SettingsService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use Inertia\{Inertia, Response};
+use Inertia\Inertia;
+use Inertia\Response;
 use Throwable;
 
 class PaymentController extends Controller
@@ -28,9 +32,10 @@ class PaymentController extends Controller
         try {
             $amount = $this->amount($applicant, $settings);
             $channels = Cache::remember('payment.channels.'.$gateway->provider().'.'.$gateway->mode().'.'.$amount, 300, fn () => $gateway->channels($amount));
-        } catch (\Throwable) {
+        } catch (Throwable) {
             $error = 'Channel pembayaran sedang tidak tersedia.';
         }
+
         return Inertia::render('Public/Payment', [
             'applicant' => ['registration_number' => $applicant->registration_number, 'full_name' => $applicant->full_name, 'payment_status' => $applicant->payment_status],
             'registrationFee' => $this->amount($applicant, $settings),
@@ -45,7 +50,9 @@ class PaymentController extends Controller
     {
         $data = $request->validate(['method' => ['required', 'string', 'max:30']]);
         $applicant = Applicant::with('admissionPeriod')->where('registration_number', $registrationNumber)->firstOrFail();
-        if ($applicant->payment_status->value === 'paid') return back()->with('status', 'Pembayaran sudah lunas.');
+        if ($applicant->payment_status->value === 'paid') {
+            return back()->with('status', 'Pembayaran sudah lunas.');
+        }
         $merchantRef = 'PMB-'.now()->format('Ymd').'-'.Str::upper(Str::random(12));
         $amount = $this->amount($applicant, $settings);
         $provider = $gateway->provider();
@@ -68,26 +75,30 @@ class PaymentController extends Controller
             'status' => 'unpaid', 'checkout_url' => $remote[$isTripay ? 'checkout_url' : 'paymentUrl'] ?? null,
             'instructions_json' => isset($remote[$isTripay ? 'pay_code' : 'vaNumber']) ? ['va_number' => $remote[$isTripay ? 'pay_code' : 'vaNumber']] : null,
             'expires_at' => now()->addDay(),
-            'response_payload_redacted' => array_intersect_key($remote, array_flip(['merchantCode','reference','paymentUrl','checkout_url','vaNumber','pay_code','amount','statusCode','statusMessage'])),
+            'response_payload_redacted' => array_intersect_key($remote, array_flip(['merchantCode', 'reference', 'paymentUrl', 'checkout_url', 'vaNumber', 'pay_code', 'amount', 'statusCode', 'statusMessage'])),
         ]));
         $applicant->update(['payment_status' => 'pending']);
-        if (! $payment->checkout_url) throw ValidationException::withMessages(['method' => 'Tautan pembayaran belum tersedia. Silakan coba kembali.']);
+        if (! $payment->checkout_url) {
+            throw ValidationException::withMessages(['method' => 'Tautan pembayaran belum tersedia. Silakan coba kembali.']);
+        }
+
         return redirect()->away($payment->checkout_url);
     }
 
     public function manual(Request $request, string $registrationNumber, SettingsService $settings): RedirectResponse
     {
-        $request->validate(['payment_proof' => ['required','file','mimes:jpg,jpeg,png,pdf','max:5120']]);
+        $request->validate(['payment_proof' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120']]);
         $applicant = Applicant::with('admissionPeriod')->where('registration_number', $registrationNumber)->firstOrFail();
         abort_if($applicant->payment_status->value === 'paid', 422, 'Pembayaran sudah lunas.');
         $file = $request->file('payment_proof');
         $amount = $this->amount($applicant, $settings);
         DB::transaction(function () use ($applicant, $file, $amount) {
-            $path = $file->storeAs('applicants/'.$applicant->id, Str::uuid().'.'.$file->guessExtension(), 'local');
-            $applicant->documents()->create(['type'=>'payment_proof','disk'=>'local','path'=>$path,'original_name'=>$file->getClientOriginalName(),'mime_type'=>$file->getMimeType(),'extension'=>$file->guessExtension(),'size'=>$file->getSize(),'sha256'=>hash_file('sha256',$file->getRealPath()),'verification_status'=>'pending']);
-            Payment::create(['applicant_id'=>$applicant->id,'provider'=>'manual','merchant_ref'=>'MANUAL-'.Str::upper(Str::random(16)),'base_amount'=>$amount,'total_amount'=>$amount,'status'=>'pending']);
-            $applicant->update(['payment_status'=>'pending']);
+            $path = $file->storeAs($applicant->storageDirectory(), Str::uuid().'.'.$file->guessExtension(), 'local');
+            $applicant->documents()->create(['type' => 'payment_proof', 'disk' => 'local', 'path' => $path, 'original_name' => $file->getClientOriginalName(), 'mime_type' => $file->getMimeType(), 'extension' => $file->guessExtension(), 'size' => $file->getSize(), 'sha256' => hash_file('sha256', $file->getRealPath()), 'verification_status' => 'pending']);
+            Payment::create(['applicant_id' => $applicant->id, 'provider' => 'manual', 'merchant_ref' => 'MANUAL-'.Str::upper(Str::random(16)), 'base_amount' => $amount, 'total_amount' => $amount, 'status' => 'pending']);
+            $applicant->update(['payment_status' => 'pending']);
         });
+
         return back()->with('status', 'Bukti pembayaran diterima dan menunggu verifikasi finance.');
     }
 }
