@@ -32,7 +32,7 @@ const services=[
     </header>
 
     <main>
-      <section class="islamic-pattern relative overflow-hidden bg-gradient-to-br from-[#043d2e] via-[#075c42] to-[#087557] text-white">
+      <section class="islamic-pattern relative overflow-hidden bg-gradient-to-br from-[#021f18] via-[#04382a] to-[#07513c] text-white">
         <div class="hero-islamic-overlay absolute inset-0"></div>
         <div class="relative mx-auto grid min-h-[620px] max-w-7xl items-center gap-12 px-5 py-20 lg:grid-cols-[1.18fr_.82fr]">
           <div>
@@ -81,7 +81,7 @@ const services=[
 <style scoped>
 .islamic-pattern::before{content:"";position:absolute;inset:0;z-index:1;opacity:.2;background-image:url('/images/islamic-geometric-bg.png');background-size:600px auto;mix-blend-mode:screen;pointer-events:none}
 .islamic-pattern::after{content:"";position:absolute;z-index:1;right:-12rem;top:-14rem;width:40rem;height:40rem;border:2px solid rgba(230,191,85,.28);outline:1px solid rgba(255,255,255,.12);border-radius:42% 58% 44% 56%;transform:rotate(35deg);box-shadow:0 0 0 5rem rgba(4,78,59,.08),0 0 0 5.15rem rgba(230,191,85,.08);pointer-events:none}
-.hero-islamic-overlay{z-index:2;background:radial-gradient(circle at 82% 18%,rgba(212,175,55,.22),transparent 31%),radial-gradient(circle at 14% 92%,rgba(51,211,153,.13),transparent 35%),linear-gradient(90deg,rgba(2,44,34,.26),transparent 45%,rgba(3,63,45,.12));pointer-events:none}
+.hero-islamic-overlay{z-index:2;background:radial-gradient(circle at 82% 18%,rgba(212,175,55,.14),transparent 31%),radial-gradient(circle at 14% 92%,rgba(16,185,129,.09),transparent 35%),linear-gradient(90deg,rgba(1,24,18,.48),rgba(2,48,35,.2) 48%,rgba(3,43,32,.36));pointer-events:none}
 .islamic-pattern>.relative{z-index:3}
 </style>
 
