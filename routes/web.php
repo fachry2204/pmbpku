@@ -7,6 +7,7 @@ use App\Http\Controllers\Public\PaymentController;
 use App\Http\Controllers\Public\RegistrationController;
 use App\Http\Controllers\Public\StatusLookupController;
 use App\Http\Controllers\Webhooks\DuitkuWebhookController;
+use App\Http\Controllers\Webhooks\MidtransWebhookController;
 use App\Http\Controllers\Webhooks\TripayWebhookController;
 use App\Services\SettingsService;
 use Illuminate\Support\Facades\Route;
@@ -25,7 +26,7 @@ Route::get('/pendaftaran', [RegistrationController::class, 'create'])->name('reg
 Route::post('/pendaftaran', [RegistrationController::class, 'store'])->middleware('throttle:5,1')->name('registration.store');
 Route::get('/pendaftaran/{registrationNumber}/berhasil', [RegistrationController::class, 'success'])->name('registration.success');
 Route::get('/pembayaran/{registrationNumber}', [PaymentController::class, 'show'])->name('payment.show');
-Route::post('/pembayaran/{registrationNumber}/duitku', [PaymentController::class, 'create'])->middleware('throttle:5,10')->name('payment.create');
+Route::post('/pembayaran/{registrationNumber}/gateway', [PaymentController::class, 'create'])->middleware('throttle:5,10')->name('payment.create');
 Route::post('/pembayaran/{registrationNumber}/manual', [PaymentController::class, 'manual'])->middleware('throttle:3,10')->name('payment.manual');
 Route::get('/cek-status', [StatusLookupController::class, 'index'])->name('status.index');
 Route::post('/cek-status', [StatusLookupController::class, 'lookup'])->middleware('throttle:10,10')->name('status.lookup');
@@ -34,6 +35,7 @@ Route::get('/cek-status/foto', [StatusLookupController::class, 'photo'])->name('
 Route::post('/cek-status/{applicant}/documents/{type}/revision', DocumentRevisionController::class)->middleware('throttle:5,10')->name('status.document-revision');
 Route::post('/webhooks/duitku', DuitkuWebhookController::class)->middleware('throttle:120,1')->name('webhooks.duitku');
 Route::post('/webhooks/tripay', TripayWebhookController::class)->middleware('throttle:120,1')->name('webhooks.tripay');
+Route::post('/webhooks/midtrans', MidtransWebhookController::class)->middleware('throttle:120,1')->name('webhooks.midtrans');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

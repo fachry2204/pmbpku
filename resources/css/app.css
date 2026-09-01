@@ -4,32 +4,24 @@
 
 @layer base {
     body {
-        background-color: #f4f8f2;
-        background-image: linear-gradient(rgba(249, 251, 246, .86), rgba(249, 251, 246, .86)), url('/images/islamic-geometric-bg.png');
-        background-size: auto, 720px auto;
+        background-color: #032f25;
+        background-image:
+            radial-gradient(circle at 8% 12%, rgba(16, 185, 129, .16), transparent 30%),
+            radial-gradient(circle at 88% 16%, rgba(229, 191, 75, .12), transparent 34%),
+            linear-gradient(135deg, rgba(2, 31, 24, .98), rgba(4, 66, 47, .96) 50%, rgba(7, 81, 60, .97)),
+            url('/images/islamic-geometric-bg.png');
+        background-size: auto, auto, auto, 640px auto;
         background-attachment: fixed;
+        background-blend-mode: normal, normal, normal, soft-light;
     }
 }
 
 @layer components {
     .islamic-light-bg,
-    .bg-slate-100,
-    .bg-emerald-50,
-    .bg-gray-100 {
-        background-color: rgba(244, 248, 242, .9) !important;
-        background-image: linear-gradient(rgba(248, 251, 247, .86), rgba(248, 251, 247, .86)), url('/images/islamic-geometric-bg.png') !important;
-        background-size: auto, 720px auto !important;
-        background-attachment: fixed !important;
-    }
-
-    .islamic-surface {
-        background-color: #edf7f0;
-        background-image: linear-gradient(rgba(239, 248, 242, .82), rgba(249, 251, 247, .9)), url('/images/islamic-geometric-bg.png');
-        background-size: auto, 680px auto;
-        background-attachment: fixed;
-    }
-
-    .islamic-gradient-page {
+    .islamic-gradient-page,
+    main.min-h-screen.bg-slate-100,
+    main.min-h-screen.bg-emerald-50,
+    .min-h-screen.bg-gray-100 {
         position: relative;
         isolation: isolate;
         overflow-x: hidden;
@@ -44,7 +36,11 @@
         background-blend-mode: normal, normal, normal, soft-light;
     }
 
-    .islamic-gradient-page::before {
+    .islamic-light-bg::before,
+    .islamic-gradient-page::before,
+    main.min-h-screen.bg-slate-100::before,
+    main.min-h-screen.bg-emerald-50::before,
+    .min-h-screen.bg-gray-100::before {
         content: '';
         position: fixed;
         inset: 0;
@@ -55,7 +51,11 @@
         pointer-events: none;
     }
 
-    .islamic-gradient-page::after {
+    .islamic-light-bg::after,
+    .islamic-gradient-page::after,
+    main.min-h-screen.bg-slate-100::after,
+    main.min-h-screen.bg-emerald-50::after,
+    .min-h-screen.bg-gray-100::after {
         content: '';
         position: fixed;
         z-index: -1;
@@ -67,6 +67,25 @@
         outline: 1px solid rgba(255, 255, 255, .13);
         transform: rotate(45deg);
         pointer-events: none;
+    }
+
+    .islamic-surface {
+        background-color: #edf7f0;
+        background-image: linear-gradient(rgba(239, 248, 242, .82), rgba(249, 251, 247, .9)), url('/images/islamic-geometric-bg.png');
+        background-size: auto, 680px auto;
+        background-attachment: fixed;
+    }
+
+    .islamic-light-bg .admin-page main > section > h1,
+    .islamic-light-bg .admin-page main > section > div:first-child > h1,
+    .islamic-light-bg .admin-page main > section > div:first-child > div > h1 {
+        color: #ffffff !important;
+        text-shadow: 0 2px 16px rgba(0, 0, 0, .22);
+    }
+
+    .islamic-light-bg .admin-page main > section > a:first-child,
+    .islamic-light-bg .admin-page main > section > div:first-child > a:first-child {
+        color: #f3cf64 !important;
     }
 
     .islamic-glass-card {

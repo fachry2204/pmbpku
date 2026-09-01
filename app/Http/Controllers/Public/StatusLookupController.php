@@ -65,14 +65,20 @@ class StatusLookupController
         $id = $request->session()->get('status_applicant_id');
         abort_unless($id, 403);
         $applicant = Applicant::with([
-            'documents:id,applicant_id,type,verification_status,review_note',
-            'payments:id,applicant_id,status,checkout_url,expires_at',
+            'documents:id,applicant_id,type,original_name,verification_status,review_note,created_at',
+            'payments:id,applicant_id,status,checkout_url,base_amount,fee_customer,total_amount,expires_at,created_at',
         ])->findOrFail($id);
 
         return Inertia::render('Public/StatusDetail', ['applicant' => [
             'id' => $applicant->id,
             'registration_number' => $applicant->registration_number,
             'full_name' => $applicant->full_name,
+            'birth_place' => $applicant->birth_place,
+            'birth_date' => $applicant->birth_date?->format('d/m/Y'),
+            'address' => $applicant->address,
+            'whatsapp' => $applicant->whatsapp_display,
+            'email' => $applicant->email,
+            'submitted_at' => $applicant->submitted_at?->translatedFormat('d F Y, H:i'),
             'photo_url' => $applicant->documents->contains('type', 'photo_4x6') ? route('status.photo') : null,
             'registration_status' => $applicant->registration_status,
             'payment_status' => $applicant->payment_status,
@@ -80,6 +86,7 @@ class StatusLookupController
             'selection_status' => $applicant->selection_status,
             'documents' => $applicant->documents,
             'payments' => $applicant->payments,
+            'payment_url' => route('payment.show', $applicant->registration_number),
         ]]);
     }
 

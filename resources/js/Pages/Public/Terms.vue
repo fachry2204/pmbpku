@@ -30,7 +30,7 @@ const lineType = (line: string) => line.startsWith('- ') ? 'bullet' : /^\d+\.\s/
 
 <template>
   <Head title="Syarat dan Ketentuan PMB" />
-  <main class="terms-page min-h-screen text-slate-700">
+  <main class="terms-page islamic-gradient-page min-h-screen text-slate-700">
     <header class="border-b border-white/10 bg-[#032f25] text-white">
       <div class="mx-auto flex max-w-6xl items-center justify-between gap-5 px-5 py-5">
         <Link href="/" aria-label="Kembali ke halaman utama"><img src="/images/logo-footer-pku.png" alt="Pendidikan Kader Ulama MUI Provinsi DKI Jakarta" class="h-auto w-52 rounded-md bg-white object-contain sm:w-64" /></Link>
@@ -82,6 +82,5 @@ const lineType = (line: string) => line.startsWith('- ') ? 'bullet' : /^\d+\.\s/
 </template>
 
 <style scoped>
-.terms-page{background:linear-gradient(135deg,#effaf4 0%,#f8faf5 48%,#e7f7ed 100%)}
 .terms-pattern{opacity:.12;background-image:url('/images/islamic-geometric-bg.png');background-size:520px auto;mix-blend-mode:screen}
 </style>

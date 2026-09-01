@@ -46,6 +46,11 @@ return [
         'api_key' => env('TRIPAY_API_KEY'),
         'private_key' => env('TRIPAY_PRIVATE_KEY'),
     ],
+    'midtrans' => [
+        'mode' => env('MIDTRANS_MODE', 'sandbox'),
+        'server_key' => env('MIDTRANS_SERVER_KEY'),
+        'client_key' => env('MIDTRANS_CLIENT_KEY'),
+    ],
     'fonnte' => [
         'base_url' => env('FONNTE_BASE_URL', 'https://api.fonnte.com'),
         'token' => env('FONNTE_TOKEN'),

@@ -32,7 +32,7 @@ class AppServiceProvider extends ServiceProvider
         try {
             if (Schema::hasTable('settings')) {
                 $settings = app(SettingsService::class);
-                foreach (['duitku.mode', 'duitku.merchant_code', 'duitku.api_key', 'tripay.mode', 'tripay.merchant_code', 'tripay.api_key', 'tripay.private_key', 'fonnte.base_url', 'fonnte.token'] as $key) {
+                foreach (['duitku.mode', 'duitku.merchant_code', 'duitku.api_key', 'tripay.mode', 'tripay.merchant_code', 'tripay.api_key', 'tripay.private_key', 'midtrans.mode', 'midtrans.server_key', 'midtrans.client_key', 'fonnte.base_url', 'fonnte.token'] as $key) {
                     if (($value = $settings->get($key)) !== null) {
                         config()->set('services.'.$key, $value);
                     }

@@ -75,8 +75,8 @@ const rupiah = (value: number) => 'Rp ' + Number(value || 0).toLocaleString('id-
 
       <main class="p-5 md:p-8">
         <div class="flex flex-wrap items-end justify-between gap-3">
-          <div><p class="text-xs font-bold uppercase tracking-[.18em] text-[#b38b21]">Portal Administrator</p><h1 class="mt-1 text-2xl font-extrabold text-[#102b24] md:text-3xl">Dashboard PMB</h1><p class="mt-1 text-sm text-slate-500">Pantau aktivitas penerimaan mahasiswa baru dalam satu halaman.</p></div>
-          <p class="text-xs text-slate-400">Beranda / <b class="text-slate-600">Dashboard</b></p>
+          <div><p class="text-xs font-bold uppercase tracking-[.18em] text-[#f0c959]">Portal Administrator</p><h1 class="mt-1 text-2xl font-extrabold text-white md:text-3xl">Dashboard PMB</h1><p class="mt-1 text-sm text-emerald-50/75">Pantau aktivitas penerimaan mahasiswa baru dalam satu halaman.</p></div>
+          <p class="text-xs text-emerald-100/60">Beranda / <b class="text-white">Dashboard</b></p>
         </div>
 
         <section class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

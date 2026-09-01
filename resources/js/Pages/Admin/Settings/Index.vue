@@ -6,7 +6,7 @@ type Field = { key: string; label: string; type: string; hint?: string };
 type TabKey = 'registration' | 'subjects' | 'payment' | 'drive' | 'notifications';
 type Section = { tab: TabKey; title: string; description: string; accent: string; icon: string; fields: Field[] };
 
-const props = defineProps<{ values: Record<string, any>; callbackUrl: string; tripayCallbackUrl: string; returnUrl: string; unreadableSettings: string[] }>();
+const props = defineProps<{ values: Record<string, any>; callbackUrl: string; tripayCallbackUrl: string; midtransCallbackUrl: string; returnUrl: string; unreadableSettings: string[] }>();
 const page = usePage() as any;
 const form = useForm(Object.fromEntries(Object.entries(props.values).map(([key, value]) => [key.replaceAll('.', '_'), value])) as Record<string, any>);
 const testForm = useForm({ test_email_recipient: '' });
@@ -15,7 +15,7 @@ const activeTab = ref<TabKey>('registration');
 const tabs: { key: TabKey; label: string; description: string }[] = [
   { key: 'registration', label: 'Pendaftaran', description: 'Biaya & formulir' },
   { key: 'subjects', label: 'Mapel', description: 'Nama kolom nilai' },
-  { key: 'payment', label: 'Payment Gateway', description: 'Duitku & Tripay' },
+  { key: 'payment', label: 'Payment Gateway', description: 'Duitku, Tripay & Midtrans' },
   { key: 'drive', label: 'Google Drive', description: 'Penyimpanan rclone' },
   { key: 'notifications', label: 'Notifikasi', description: 'WhatsApp & Email' },
 ];
@@ -32,10 +32,10 @@ const sections = computed<Section[]>(() => [
     { key: 'registration_document_upload_disabled', label: 'Nonaktifkan Upload Dokumen', type: 'toggle', hint: 'Jika aktif, langkah upload dokumen disembunyikan dan dokumen tidak wajib. Jika nonaktif, semua dokumen wajib diunggah.' },
   ]},
   { tab: 'subjects', title: 'Mapel / Komponen Nilai', description: 'Ubah nama empat kolom nilai tanpa mengubah atau menghapus nilai pendaftar yang sudah tersimpan.', accent: 'bg-cyan-50 text-cyan-700', icon: 'N', fields: [
-    { key: 'scores_label_1', label: 'Nama Nilai 1', type: 'text', hint: 'Contoh: Tes Tulis, Bahasa Arab, atau Wawancara.' },
-    { key: 'scores_label_2', label: 'Nama Nilai 2', type: 'text', hint: 'Nama ini tampil sebagai judul kolom pada menu Nilai Calon.' },
-    { key: 'scores_label_3', label: 'Nama Nilai 3', type: 'text', hint: 'Maksimal 80 karakter.' },
-    { key: 'scores_label_4', label: 'Nama Nilai 4', type: 'text', hint: 'Nilai lama tetap tersimpan ketika nama diganti.' },
+    { key: 'scores_label_1', label: 'Komponen Nilai 1 · Bobot 25%', type: 'text', hint: 'Default: Tes Tulis Wawasan Keislaman.' },
+    { key: 'scores_label_2', label: 'Komponen Nilai 2 · Bobot 10%', type: 'text', hint: 'Default: Membaca Al Qur’an.' },
+    { key: 'scores_label_3', label: 'Komponen Nilai 3 · Bobot 50%', type: 'text', hint: 'Default: Qiroatul Kutub & Muhadatsah Bahasa Arab.' },
+    { key: 'scores_label_4', label: 'Komponen Nilai 4 · Bobot 15%', type: 'text', hint: 'Default: Wawancara. Mengubah nama tidak mengubah bobot.' },
   ]},
   { tab: 'payment', title: 'Payment Gateway', description: 'Konfigurasi lingkungan dan kredensial pembayaran otomatis.', accent: 'bg-blue-50 text-blue-700', icon: 'PG', fields: [
     { key: 'payment_provider', label: 'Penyedia Payment Gateway', type: 'provider', hint: 'Pilih satu provider yang digunakan pada halaman pendaftaran.' },
@@ -44,6 +44,10 @@ const sections = computed<Section[]>(() => [
       { key: 'tripay_merchant_code', label: 'Merchant Code Tripay', type: 'password', hint: 'Kode merchant dari dashboard Tripay.' },
       { key: 'tripay_api_key', label: 'API Key Tripay', type: 'password', hint: 'Digunakan sebagai Bearer token untuk mengakses API Tripay.' },
       { key: 'tripay_private_key', label: 'Private Key Tripay', type: 'password', hint: 'Kunci rahasia untuk signature transaksi dan validasi callback.' },
+    ] : form.payment_provider === 'midtrans' ? [
+      { key: 'midtrans_mode', label: 'Mode Midtrans', type: 'select', hint: 'Gunakan Sandbox untuk pengujian dan Production setelah akun Midtrans aktif.' },
+      { key: 'midtrans_server_key', label: 'Server Key Midtrans', type: 'password', hint: 'Kunci rahasia backend dari menu Settings > Access Keys di dashboard Midtrans.' },
+      { key: 'midtrans_client_key', label: 'Client Key Midtrans', type: 'password', hint: 'Client Key dari dashboard Midtrans. Disimpan untuk kebutuhan integrasi Snap.' },
     ] : [
       { key: 'duitku_mode', label: 'Mode Duitku', type: 'select', hint: 'Gunakan kredensial yang sesuai dengan mode Sandbox atau Production.' },
       { key: 'duitku_merchant_code', label: 'Merchant Code Duitku', type: 'password', hint: 'Kode merchant dari dashboard Duitku.' },
@@ -111,7 +115,7 @@ const visibleSections = computed(() => sections.value.filter(section => section.
                 <input v-model="form[field.key]" type="checkbox" class="h-5 w-5 rounded border-slate-300 text-emerald-700 focus:ring-emerald-600" />
                 <span class="font-semibold" :class="form[field.key] ? 'text-emerald-700' : 'text-slate-500'">{{ form[field.key] ? 'Aktif' : 'Nonaktif' }}</span>
               </label>
-              <select v-else-if="field.type === 'provider'" v-model="form[field.key]" class="mt-2 w-full rounded-xl border-slate-300 bg-white px-4 py-3 focus:border-emerald-600 focus:ring-emerald-600"><option value="duitku">Duitku</option><option value="tripay">Tripay</option></select>
+              <select v-else-if="field.type === 'provider'" v-model="form[field.key]" class="mt-2 w-full rounded-xl border-slate-300 bg-white px-4 py-3 focus:border-emerald-600 focus:ring-emerald-600"><option value="duitku">Duitku</option><option value="tripay">Tripay</option><option value="midtrans">Midtrans</option></select>
               <select v-else-if="field.type === 'select'" v-model="form[field.key]" class="mt-2 w-full rounded-xl border-slate-300 bg-white px-4 py-3 focus:border-emerald-600 focus:ring-emerald-600"><option value="sandbox">Sandbox</option><option value="production">Production</option></select>
               <select v-else-if="field.type === 'year'" v-model="form[field.key]" class="mt-2 w-full rounded-xl border-slate-300 bg-white px-4 py-3 focus:border-emerald-600 focus:ring-emerald-600"><option v-for="year in Array.from({ length: 11 }, (_, index) => new Date().getFullYear() - 2 + index)" :key="year" :value="year">{{ year }}</option></select>
               <input v-else v-model="form[field.key]" :type="field.type" class="mt-2 w-full rounded-xl border-slate-300 bg-white px-4 py-3 focus:border-emerald-600 focus:ring-emerald-600" autocomplete="off" />
@@ -127,7 +131,7 @@ const visibleSections = computed(() => sections.value.filter(section => section.
             <div class="mt-5 grid gap-4">
               <div>
                 <label class="text-xs font-bold uppercase tracking-wider text-slate-500">Callback URL</label>
-                <div class="mt-2 flex gap-2"><input :value="form.payment_provider === 'tripay' ? tripayCallbackUrl : callbackUrl" readonly class="min-w-0 flex-1 rounded-xl border-blue-200 bg-white px-4 py-3 font-mono text-sm text-slate-700"/><button type="button" class="shrink-0 rounded-xl bg-blue-700 px-4 text-sm font-bold text-white" @click="copyUrl('callback', form.payment_provider === 'tripay' ? tripayCallbackUrl : callbackUrl)">{{ copied === 'callback' ? 'Tersalin ✓' : 'Salin' }}</button></div>
+                <div class="mt-2 flex gap-2"><input :value="form.payment_provider === 'tripay' ? tripayCallbackUrl : form.payment_provider === 'midtrans' ? midtransCallbackUrl : callbackUrl" readonly class="min-w-0 flex-1 rounded-xl border-blue-200 bg-white px-4 py-3 font-mono text-sm text-slate-700"/><button type="button" class="shrink-0 rounded-xl bg-blue-700 px-4 text-sm font-bold text-white" @click="copyUrl('callback', form.payment_provider === 'tripay' ? tripayCallbackUrl : form.payment_provider === 'midtrans' ? midtransCallbackUrl : callbackUrl)">{{ copied === 'callback' ? 'Tersalin ✓' : 'Salin' }}</button></div>
                 <p class="mt-2 text-xs leading-5 text-slate-500">Digunakan sistem pembayaran untuk mengirim status transaksi secara otomatis.</p>
               </div>
               <div>

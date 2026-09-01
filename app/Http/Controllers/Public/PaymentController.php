@@ -69,7 +69,7 @@ class PaymentController extends Controller
         $isTripay = $provider === 'tripay';
         $payment = DB::transaction(fn () => Payment::create([
             'applicant_id' => $applicant->id, 'provider' => $provider, 'merchant_ref' => $merchantRef,
-            'provider_reference' => $remote['reference'], 'payment_method' => $remote[$isTripay ? 'payment_method' : 'paymentMethod'] ?? $data['method'],
+            'provider_reference' => $remote['reference'] ?? null, 'payment_method' => $remote[$isTripay ? 'payment_method' : 'paymentMethod'] ?? $data['method'],
             'base_amount' => $amount, 'fee_merchant' => (int) ($remote['fee_merchant'] ?? 0),
             'fee_customer' => (int) ($remote['fee_customer'] ?? 0), 'total_amount' => (int) ($remote['amount'] ?? $amount) + (int) ($isTripay ? ($remote['fee_customer'] ?? 0) : 0),
             'status' => 'unpaid', 'checkout_url' => $remote[$isTripay ? 'checkout_url' : 'paymentUrl'] ?? null,

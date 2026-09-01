@@ -13,6 +13,8 @@ use Inertia\Response;
 
 class ApplicantScoreController extends Controller
 {
+    private const SCORE_WEIGHTS = [25, 10, 50, 15];
+
     public function index(Request $request, SettingsService $settings): Response
     {
         $query = Applicant::with('score')->where('selection_status', 'passed');
@@ -22,6 +24,12 @@ class ApplicantScoreController extends Controller
 
         $applicants = $query->orderBy('full_name')->paginate(25)->withQueryString()->through(function (Applicant $applicant) {
             $scores = collect([$applicant->score?->score_1, $applicant->score?->score_2, $applicant->score?->score_3, $applicant->score?->score_4]);
+            $finalScore = $scores->contains(null)
+                ? null
+                : $scores->values()->reduce(
+                    fn (float $total, mixed $score, int $index) => $total + ((float) $score * self::SCORE_WEIGHTS[$index] / 100),
+                    0.0
+                );
 
             return [
                 'id' => $applicant->id,
@@ -31,7 +39,7 @@ class ApplicantScoreController extends Controller
                 'score_2' => $applicant->score?->score_2,
                 'score_3' => $applicant->score?->score_3,
                 'score_4' => $applicant->score?->score_4,
-                'average' => $scores->contains(null) ? null : round((float) $scores->average(), 2),
+                'final_score' => $finalScore === null ? null : round($finalScore, 2),
             ];
         });
 
@@ -39,9 +47,20 @@ class ApplicantScoreController extends Controller
             'applicants' => $applicants,
             'filters' => $request->only('search'),
             'scoreLabels' => collect(range(1, 4))->map(
-                fn (int $number) => $settings->get("scores.label_{$number}", "Nilai {$number}")
+                fn (int $number) => $settings->get("scores.label_{$number}", $this->defaultScoreLabels()[$number - 1])
             )->values(),
+            'scoreWeights' => self::SCORE_WEIGHTS,
         ]);
+    }
+
+    private function defaultScoreLabels(): array
+    {
+        return [
+            'Tes Tulis Wawasan Keislaman',
+            'Membaca Al Qur’an',
+            'Qiroatul Kutub & Muhadatsah Bahasa Arab',
+            'Wawancara',
+        ];
     }
 
     public function update(Request $request, Applicant $applicant): RedirectResponse

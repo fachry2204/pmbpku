@@ -1,33 +1,77 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 
 const props = defineProps<{ applicant: any }>();
-const label = (value: string) => value.replaceAll('_', ' ');
-const revision = (document: any, event: Event) => {
-  const file = (event.target as HTMLInputElement).files?.[0];
-  if (!file) return;
-  const data = new FormData();
-  data.append('document', file);
-  router.post(`/cek-status/${props.applicant.id}/documents/${document.type}/revision`, data, { forceFormData: true, preserveScroll: true });
-};
+const documentsOpen = ref(true);
+const statusLabels: Record<string, string> = { unpaid:'Belum Bayar',pending:'Menunggu Pembayaran',paid:'Sudah Bayar',expired:'Kedaluwarsa',failed:'Gagal',refunded:'Dikembalikan',pending_review:'Menunggu Review',complete:'Berkas Lengkap',incomplete:'Belum Lengkap',revision_submitted:'Revisi Dikirim',not_scheduled:'Belum Dijadwalkan',scheduled:'Terjadwal',attending_test:'Tahap Seleksi',passed:'Lulus Seleksi',not_passed:'Belum Lulus',withdrawn:'Dibatalkan',approved:'Disetujui',rejected:'Ditolak',revision_required:'Perlu Revisi' };
+const documentLabels: Record<string, string> = { recommendation_letter:'Surat Rekomendasi',diploma:'Ijazah',photo_4x6:'Pas Foto 4×6',identity_card:'Kartu Tanda Penduduk (KTP)',pddikti_screenshot:'Screenshot PDDIKTI',payment_proof:'Bukti Pembayaran' };
+const label=(value:string)=>statusLabels[value]||value.replaceAll('_',' ').replace(/\b\w/g,char=>char.toUpperCase());
+const steps=['Belum Bayar','Sudah Bayar','Berkas Lengkap','Tahap Seleksi','Lulus Seleksi'];
+const stageIndexes: Record<string, number>={not_paid:0,paid:1,documents_complete:2,selection_stage:3,selection_passed:4};
+const activeStep=computed(()=>stageIndexes[String(props.applicant.registration_status.key)]??0);
+const latestPayment=computed(()=>props.applicant.payments?.at(-1));
+const money=(value:number|null|undefined)=>value==null?'—':new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(value);
+const statusTone=(status:string)=>status==='paid'||['complete','approved','passed'].includes(status)?'success':['rejected','failed','expired','not_passed'].includes(status)?'danger':'warning';
+const revision=(document:any,event:Event)=>{const file=(event.target as HTMLInputElement).files?.[0];if(!file)return;const data=new FormData();data.append('document',file);router.post(`/cek-status/${props.applicant.id}/documents/${document.type}/revision`,data,{forceFormData:true,preserveScroll:true});};
 </script>
 
 <template>
   <Head title="Status Pendaftaran" />
-  <main class="min-h-screen bg-emerald-50 p-5">
-    <section class="mx-auto max-w-4xl space-y-6 rounded-3xl bg-white p-8 shadow-xl">
-      <div class="flex items-center gap-5">
-        <img v-if="applicant.photo_url" :src="applicant.photo_url" :alt="`Pas foto ${applicant.full_name}`" class="h-24 w-20 rounded-2xl border-2 border-emerald-100 object-cover shadow-md" />
-        <div><p class="font-semibold text-emerald-700">{{ applicant.registration_number }}</p><h1 class="text-3xl font-bold text-emerald-950">Status {{ applicant.full_name }}</h1></div>
-      </div>
-      <div class="rounded-2xl bg-gradient-to-r from-emerald-900 to-emerald-700 p-5 text-white shadow-lg">
-        <p class="text-xs font-bold uppercase tracking-[.2em] text-emerald-200">Status Pendaftaran</p>
-        <p class="mt-2 text-2xl font-extrabold">{{ applicant.registration_status.label }}</p>
-      </div>
-      <div class="grid gap-4 md:grid-cols-3">
-        <article v-for="[title, value] in [['Pembayaran', applicant.payment_status], ['Berkas', applicant.document_status], ['Seleksi', applicant.selection_status]]" :key="title" class="rounded-2xl bg-emerald-50 p-5"><p class="text-sm text-slate-500">{{ title }}</p><p class="mt-1 font-bold capitalize text-emerald-950">{{ label(value) }}</p></article>
-      </div>
-      <div><h2 class="text-xl font-bold">Status dokumen</h2><div class="mt-3 divide-y rounded-xl border"><div v-for="document in applicant.documents" :key="document.id" class="p-4"><div class="flex justify-between gap-4"><span class="capitalize">{{ label(document.type) }}</span><span class="font-semibold capitalize">{{ label(document.verification_status) }}</span></div><p v-if="document.review_note" class="mt-2 text-sm text-amber-800">{{ document.review_note }}</p><label v-if="document.verification_status === 'revision_required'" class="mt-3 block rounded-lg bg-amber-50 p-3 text-sm font-semibold text-amber-900">Unggah dokumen perbaikan<input type="file" accept=".jpg,.jpeg,.png,.pdf" class="mt-2 block w-full" @change="revision(document, $event)" /></label></div></div></div>
-    </section>
+  <main class="status-page min-h-screen px-4 py-6 text-slate-700 sm:px-6 lg:px-8 lg:py-10">
+    <div class="relative z-10 mx-auto max-w-7xl">
+      <nav class="mb-5 flex flex-wrap items-center justify-between gap-3 text-sm">
+        <Link href="/" class="nav-action nav-action-light"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/><path d="M9 12h11"/></svg>Kembali ke halaman utama</Link>
+        <Link href="/cek-status" class="nav-action nav-action-dark"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>Cari pendaftaran lain</Link>
+      </nav>
+      <section class="status-surface relative overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-2xl shadow-black/25">
+        <div class="surface-pattern" aria-hidden="true"></div>
+        <div class="relative z-10 p-5 sm:p-7 lg:p-9">
+          <header class="grid gap-6 border-b border-emerald-950/10 pb-7 lg:grid-cols-[1.15fr_.85fr] lg:items-center">
+            <div class="flex items-center gap-5 sm:gap-7">
+              <div class="photo-frame"><img v-if="applicant.photo_url" :src="applicant.photo_url" :alt="`Pas foto ${applicant.full_name}`" /><span v-else>{{ applicant.full_name.charAt(0) }}</span></div>
+              <div class="min-w-0"><p class="meta-label">Nomor Pendaftaran</p><p class="mt-1 break-words text-lg font-black text-emerald-800 sm:text-2xl">{{ applicant.registration_number }}</p><p class="meta-label mt-4">Nama Calon Mahasiswa</p><h1 class="mt-1 text-2xl font-black tracking-tight text-emerald-950 sm:text-4xl">{{ applicant.full_name }}</h1><p class="mt-2 text-sm text-slate-500">Pendaftaran dikirim {{ applicant.submitted_at }}</p></div>
+            </div>
+            <article class="current-status">
+              <div class="flex gap-4"><span class="status-icon"><svg viewBox="0 0 24 24"><path d="M4 7h16v12H4z"/><path d="M16 11h5v4h-5a2 2 0 0 1 0-4Z"/><path d="M7 7V5h10v2"/></svg></span><div><p class="meta-label">Status Saat Ini</p><p class="mt-1 text-2xl font-black text-emerald-900">{{ applicant.registration_status.label }}</p></div></div>
+              <p class="mt-4 text-sm leading-6 text-slate-600">{{ activeStep===0?'Selesaikan pembayaran agar proses pendaftaran dapat dilanjutkan.':activeStep===4?'Selamat, Anda telah dinyatakan lulus seleksi.':'Pendaftaran Anda sedang diproses. Pantau halaman ini untuk pembaruan berikutnya.' }}</p>
+              <a v-if="activeStep===0" :href="applicant.payment_url" class="primary-action">Lanjutkan Pembayaran <span>→</span></a>
+            </article>
+          </header>
+
+          <section class="progress-panel mt-6" aria-label="Progres pendaftaran">
+            <div class="progress-line"><span :style="{width:`${activeStep*25}%`}"></span></div>
+            <div v-for="(step,index) in steps" :key="step" class="progress-step" :class="{active:index<=activeStep,current:index===activeStep}"><span class="progress-node">{{ index<activeStep?'✓':index+1 }}</span><strong>{{ step }}</strong></div>
+          </section>
+
+          <div class="mt-7 grid gap-6 lg:grid-cols-[1.6fr_.85fr]">
+            <div class="space-y-6">
+              <section class="content-panel">
+                <h2 class="section-title"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Data Calon Mahasiswa</h2>
+                <dl class="personal-grid"><div><dt>Nama Lengkap</dt><dd>{{ applicant.full_name }}</dd></div><div><dt>Nomor WhatsApp</dt><dd>{{ applicant.whatsapp }}</dd></div><div><dt>Tempat, Tanggal Lahir</dt><dd>{{ applicant.birth_place }}, {{ applicant.birth_date }}</dd></div><div><dt>Email</dt><dd class="break-all">{{ applicant.email }}</dd></div><div class="sm:col-span-2"><dt>Alamat Lengkap</dt><dd class="whitespace-pre-line">{{ applicant.address }}</dd></div></dl>
+              </section>
+              <section class="content-panel overflow-hidden">
+                <button type="button" class="flex w-full items-center justify-between gap-4 text-left" :aria-expanded="documentsOpen" @click="documentsOpen=!documentsOpen"><h2 class="section-title"><svg viewBox="0 0 24 24"><path d="M6 2h9l4 4v16H6z"/><path d="M14 2v5h5M9 12h6M9 16h6"/></svg>Dokumen Pendaftaran <span>{{ applicant.documents.length }}</span></h2><svg class="h-5 w-5 transition" :class="{'rotate-180':documentsOpen}" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m6 9 6 6 6-6"/></svg></button>
+                <transition name="slide"><div v-if="documentsOpen" class="mt-5 divide-y divide-slate-100 border-t border-slate-100">
+                  <article v-for="document in applicant.documents" :key="document.id" class="document-row"><span class="document-icon"><svg viewBox="0 0 24 24"><path d="M6 2h9l4 4v16H6z"/><path d="M14 2v5h5"/></svg></span><div class="min-w-0 flex-1"><b class="block text-emerald-950">{{ documentLabels[document.type]||label(document.type) }}</b><small class="block truncate text-slate-400">{{ document.original_name }}</small><p v-if="document.review_note" class="mt-2 text-sm font-semibold text-amber-700">Catatan: {{ document.review_note }}</p></div><span class="status-badge" :class="statusTone(document.verification_status)">{{ label(document.verification_status) }}</span><label v-if="document.verification_status==='revision_required'" class="revision-button">Unggah Revisi<input type="file" accept=".jpg,.jpeg,.png,.pdf" class="sr-only" @change="revision(document,$event)" /></label></article>
+                  <p v-if="!applicant.documents.length" class="py-8 text-center text-sm text-slate-500">Tidak ada dokumen yang diwajibkan pada pendaftaran ini.</p>
+                </div></transition>
+              </section>
+            </div>
+            <aside class="space-y-4">
+              <section class="summary-panel"><h2 class="summary-title">Ringkasan Pembayaran</h2><div class="summary-row"><span>Status</span><b class="status-badge" :class="statusTone(applicant.payment_status)">{{ label(applicant.payment_status) }}</b></div><div class="summary-row"><span>Total Pembayaran</span><b>{{ money(latestPayment?.total_amount) }}</b></div><a v-if="activeStep===0" :href="applicant.payment_url" class="secondary-action">Lanjutkan Pembayaran <span>→</span></a></section>
+              <section class="summary-panel"><h2 class="summary-title">Ringkasan Berkas</h2><div class="summary-row"><span>Status Berkas</span><b class="status-badge" :class="statusTone(applicant.document_status)">{{ label(applicant.document_status) }}</b></div><div class="summary-row"><span>Dokumen Dikirim</span><b>{{ applicant.documents.length }}</b></div><div class="summary-row"><span>Perlu Revisi</span><b>{{ applicant.documents.filter((item:any)=>item.verification_status==='revision_required').length }}</b></div></section>
+              <section class="summary-panel"><h2 class="summary-title">Ringkasan Seleksi</h2><div class="summary-row"><span>Status Seleksi</span><b class="status-badge" :class="statusTone(applicant.selection_status)">{{ label(applicant.selection_status) }}</b></div></section>
+              <section class="privacy-panel"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v5c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6z"/><path d="m9 12 2 2 4-5"/></svg><div><b>Data pribadi Anda terlindungi</b><p>Informasi hanya ditampilkan setelah verifikasi email atau nomor WhatsApp terdaftar.</p></div></section>
+            </aside>
+          </div>
+        </div>
+      </section>
+    </div>
   </main>
 </template>
+
+<style scoped>
+.status-page{position:relative;background:linear-gradient(135deg,#022c22 0%,#064e3b 50%,#0b6a50 100%);isolation:isolate}.status-page:before{content:"";position:fixed;inset:0;z-index:-2;background-image:url('/images/islamic-geometric-bg.png');background-size:420px;opacity:.1}.status-page:after{content:"";position:fixed;inset:-25% -10%;z-index:-1;background:radial-gradient(circle at 15% 20%,rgba(232,190,66,.16),transparent 27%),radial-gradient(circle at 90% 12%,rgba(255,255,255,.1),transparent 24%);pointer-events:none}.status-surface{isolation:isolate}.surface-pattern{position:absolute;inset:0;background-image:url('/images/islamic-geometric-bg.png');background-size:360px;opacity:.035;pointer-events:none}.nav-action{display:inline-flex;align-items:center;gap:.6rem;border-radius:12px;padding:.75rem 1rem;font-weight:800;transition:.2s}.nav-action svg,.section-title svg,.status-icon svg,.document-icon svg,.privacy-panel svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.nav-action:hover{transform:translateY(-2px)}.nav-action-light{background:#fff;color:#065f46;box-shadow:0 8px 24px #001b1426}.nav-action-dark{border:1px solid #ffffff40;background:#ffffff12;color:white;backdrop-filter:blur(8px)}.meta-label{font-size:.7rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#047857}.photo-frame{display:grid;flex:none;height:142px;width:116px;place-items:center;overflow:hidden;border:4px solid white;border-radius:20px;background:linear-gradient(145deg,#047857,#064e3b);box-shadow:0 12px 26px #052e1630;color:white;font-size:2.5rem;font-weight:900}.photo-frame img{height:100%;width:100%;object-fit:cover}.current-status{border:1px solid #065f4624;border-radius:22px;background:linear-gradient(135deg,#fff,#f7fbf8);padding:1.35rem;box-shadow:0 10px 26px #064e3b12}.status-icon{display:grid;height:46px;width:46px;flex:none;place-items:center;border-radius:50%;background:#fef3c7;color:#b77900}.primary-action,.secondary-action{display:flex;align-items:center;justify-content:space-between;margin-top:1rem;border-radius:11px;padding:.8rem 1rem;background:linear-gradient(135deg,#c28d13,#e4b63d);color:white;font-size:.875rem;font-weight:900;box-shadow:0 8px 18px #b7790030;transition:.2s}.primary-action:hover,.secondary-action:hover{transform:translateY(-2px);filter:brightness(1.05)}.progress-panel{position:relative;display:grid;grid-template-columns:repeat(5,1fr);border:1px solid #e2e8f0;border-radius:20px;padding:1.25rem .75rem;background:#fff;box-shadow:0 5px 15px #0f172a0a}.progress-line{position:absolute;left:10%;right:10%;top:2.05rem;height:3px;background:#e2e8f0}.progress-line span{display:block;height:100%;background:linear-gradient(90deg,#047857,#d3a42c);transition:width .7s ease}.progress-step{position:relative;z-index:1;display:flex;align-items:center;flex-direction:column;gap:.55rem;text-align:center;color:#94a3b8;font-size:.72rem}.progress-step strong{font-weight:800}.progress-node{display:grid;height:32px;width:32px;place-items:center;border:3px solid #e2e8f0;border-radius:50%;background:#f8fafc;font-weight:900}.progress-step.active{color:#065f46}.progress-step.active .progress-node{border-color:#34d399;background:#047857;color:white}.progress-step.current .progress-node{box-shadow:0 0 0 6px #d1fae5}.content-panel,.summary-panel{border:1px solid #e2e8f0;border-radius:20px;background:#ffffffd9;padding:1.3rem;box-shadow:0 5px 16px #0f172a0a;transition:.2s}.content-panel:hover,.summary-panel:hover{border-color:#a7f3d0;box-shadow:0 10px 25px #065f4612}.section-title,.summary-title{display:flex;align-items:center;gap:.65rem;color:#065f46;font-size:1.05rem;font-weight:900}.section-title span{border-radius:999px;background:#d1fae5;padding:.15rem .5rem;font-size:.7rem}.personal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 2rem;margin-top:1rem}.personal-grid div{padding:1rem 0;border-bottom:1px solid #eef2f7}.personal-grid dt{font-size:.7rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#64748b}.personal-grid dd{margin-top:.35rem;color:#0f513f;font-weight:750}.document-row{display:flex;align-items:center;gap:.85rem;padding:1rem 0;transition:.2s}.document-row:hover{padding-left:.35rem;background:linear-gradient(90deg,#ecfdf580,transparent)}.document-icon{display:grid;height:38px;width:38px;flex:none;place-items:center;border-radius:10px;background:#ecfdf5;color:#047857}.status-badge{display:inline-flex;width:max-content;border-radius:999px;padding:.32rem .65rem;font-size:.68rem;font-weight:900;white-space:nowrap}.status-badge.success{background:#dcfce7;color:#166534}.status-badge.warning{background:#fef3c7;color:#92400e}.status-badge.danger{background:#fee2e2;color:#b91c1c}.revision-button{cursor:pointer;border:1px solid #d97706;border-radius:9px;padding:.5rem .7rem;color:#92400e;font-size:.72rem;font-weight:900}.summary-title{padding-bottom:.9rem;border-bottom:1px solid #e2e8f0}.summary-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.75rem 0;border-bottom:1px solid #f1f5f9;font-size:.82rem}.summary-row span:first-child{color:#64748b}.summary-row b{text-align:right;color:#0f513f}.secondary-action{border:1px solid #d3a42c;background:white;color:#9a6a00;box-shadow:none}.privacy-panel{display:flex;gap:.8rem;border:1px solid #bbf7d0;border-radius:18px;background:#ecfdf5;padding:1rem;color:#065f46}.privacy-panel svg{flex:none}.privacy-panel b{font-size:.82rem}.privacy-panel p{margin-top:.25rem;font-size:.72rem;line-height:1.5;color:#4b7165}.slide-enter-active,.slide-leave-active{transition:.25s}.slide-enter-from,.slide-leave-to{opacity:0;transform:translateY(-8px)}
+@media(max-width:640px){.photo-frame{height:112px;width:88px;border-radius:16px}.progress-panel{overflow-x:auto;grid-template-columns:repeat(5,105px);justify-content:start}.progress-line{left:53px;right:auto;width:420px}.personal-grid{grid-template-columns:1fr}.personal-grid .sm\:col-span-2{grid-column:auto}.document-row{align-items:flex-start;flex-wrap:wrap}.document-row .status-badge,.revision-button{margin-left:3.2rem}.nav-action{font-size:.75rem}}
+</style>

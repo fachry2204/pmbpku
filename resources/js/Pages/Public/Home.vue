@@ -11,7 +11,7 @@ const services=[
 
 <template>
   <Head title="PMB Pendidikan Kader Ulama" />
-  <div class="min-h-screen bg-[#f7f8f3] font-sans text-slate-800">
+  <div class="islamic-gradient-page min-h-screen font-sans text-slate-800">
     <div class="bg-[#054b36] text-white/85">
       <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-5 py-2 text-xs md:text-sm">
         <div class="flex gap-6"><span>◉ Pendidikan Kader Ulama</span><span class="hidden sm:inline">✦ Membina Ulama, Menguatkan Umat</span></div>
