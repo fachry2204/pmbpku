@@ -33,15 +33,15 @@
         position: relative;
         isolation: isolate;
         overflow-x: hidden;
-        background-color: #bde8cf;
+        background-color: #032f25;
         background-image:
-            radial-gradient(circle at 8% 12%, rgba(232, 255, 240, .94) 0, rgba(232, 255, 240, 0) 28%),
-            radial-gradient(circle at 88% 16%, rgba(4, 78, 59, .48) 0, rgba(4, 78, 59, 0) 35%),
-            linear-gradient(135deg, rgba(221, 250, 232, .94) 0%, rgba(113, 199, 151, .83) 48%, rgba(4, 78, 59, .94) 100%),
+            radial-gradient(circle at 8% 12%, rgba(16, 185, 129, .16) 0, rgba(16, 185, 129, 0) 30%),
+            radial-gradient(circle at 88% 16%, rgba(229, 191, 75, .12) 0, rgba(229, 191, 75, 0) 34%),
+            linear-gradient(135deg, rgba(2, 31, 24, .98) 0%, rgba(4, 66, 47, .96) 50%, rgba(7, 81, 60, .97) 100%),
             url('/images/islamic-geometric-bg.png');
         background-size: auto, auto, auto, 640px auto;
         background-attachment: fixed;
-        background-blend-mode: normal, normal, multiply, soft-light;
+        background-blend-mode: normal, normal, normal, soft-light;
     }
 
     .islamic-gradient-page::before {
@@ -50,8 +50,8 @@
         inset: 0;
         z-index: -1;
         background: url('/images/islamic-geometric-bg.png') center top / 640px auto repeat;
-        opacity: .18;
-        mix-blend-mode: multiply;
+        opacity: .12;
+        mix-blend-mode: screen;
         pointer-events: none;
     }
 
