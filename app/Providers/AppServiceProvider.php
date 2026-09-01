@@ -23,14 +23,18 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Vite::prefetch(concurrency: 3);
-        if (Schema::hasTable('settings')) {
-            $settings = app(SettingsService::class);
-            foreach (['duitku.mode','duitku.merchant_code','duitku.api_key','fonnte.base_url','fonnte.token'] as $key) {
-                if (($value = $settings->get($key)) !== null) config()->set('services.'.$key, $value);
+        try {
+            if (Schema::hasTable('settings')) {
+                $settings = app(SettingsService::class);
+                foreach (['duitku.mode','duitku.merchant_code','duitku.api_key','fonnte.base_url','fonnte.token'] as $key) {
+                    if (($value = $settings->get($key)) !== null) config()->set('services.'.$key, $value);
+                }
+                foreach (['mail.host'=>'mail.mailers.smtp.host','mail.port'=>'mail.mailers.smtp.port','mail.username'=>'mail.mailers.smtp.username','mail.password'=>'mail.mailers.smtp.password','mail.from_address'=>'mail.from.address'] as $key=>$target) {
+                    if (($value = $settings->get($key)) !== null) config()->set($target, $value);
+                }
             }
-            foreach (['mail.host'=>'mail.mailers.smtp.host','mail.port'=>'mail.mailers.smtp.port','mail.username'=>'mail.mailers.smtp.username','mail.password'=>'mail.mailers.smtp.password','mail.from_address'=>'mail.from.address'] as $key=>$target) {
-                if (($value = $settings->get($key)) !== null) config()->set($target, $value);
-            }
+        } catch (\Throwable) {
+            // Composer and Artisan must still boot before the deployment database is configured.
         }
     }
 }
