@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    body {
+        background-color: #f4f8f2;
+        background-image: linear-gradient(rgba(249, 251, 246, .86), rgba(249, 251, 246, .86)), url('/images/islamic-geometric-bg.png');
+        background-size: auto, 720px auto;
+        background-attachment: fixed;
+    }
+}
+
+@layer components {
+    .islamic-light-bg,
+    .bg-slate-100,
+    .bg-emerald-50,
+    .bg-gray-100 {
+        background-color: rgba(244, 248, 242, .9) !important;
+        background-image: linear-gradient(rgba(248, 251, 247, .86), rgba(248, 251, 247, .86)), url('/images/islamic-geometric-bg.png') !important;
+        background-size: auto, 720px auto !important;
+        background-attachment: fixed !important;
+    }
+
+    .islamic-surface {
+        background-color: #edf7f0;
+        background-image: linear-gradient(rgba(239, 248, 242, .82), rgba(249, 251, 247, .9)), url('/images/islamic-geometric-bg.png');
+        background-size: auto, 680px auto;
+        background-attachment: fixed;
+    }
+
+    .islamic-gradient-page {
+        position: relative;
+        isolation: isolate;
+        overflow-x: hidden;
+        background-color: #bde8cf;
+        background-image:
+            radial-gradient(circle at 8% 12%, rgba(232, 255, 240, .94) 0, rgba(232, 255, 240, 0) 28%),
+            radial-gradient(circle at 88% 16%, rgba(4, 78, 59, .48) 0, rgba(4, 78, 59, 0) 35%),
+            linear-gradient(135deg, rgba(221, 250, 232, .94) 0%, rgba(113, 199, 151, .83) 48%, rgba(4, 78, 59, .94) 100%),
+            url('/images/islamic-geometric-bg.png');
+        background-size: auto, auto, auto, 640px auto;
+        background-attachment: fixed;
+        background-blend-mode: normal, normal, multiply, soft-light;
+    }
+
+    .islamic-gradient-page::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        background: url('/images/islamic-geometric-bg.png') center top / 640px auto repeat;
+        opacity: .18;
+        mix-blend-mode: multiply;
+        pointer-events: none;
+    }
+
+    .islamic-gradient-page::after {
+        content: '';
+        position: fixed;
+        z-index: -1;
+        right: -12rem;
+        bottom: 5%;
+        width: 22rem;
+        height: 22rem;
+        border: 2px solid rgba(229, 191, 75, .24);
+        outline: 1px solid rgba(255, 255, 255, .13);
+        transform: rotate(45deg);
+        pointer-events: none;
+    }
+
+    .islamic-glass-card {
+        border: 1px solid rgba(255, 255, 255, .68);
+        background: rgba(255, 255, 255, .94);
+        box-shadow: 0 24px 65px rgba(2, 44, 34, .20), 0 2px 8px rgba(2, 44, 34, .08);
+        backdrop-filter: blur(14px);
+    }
+
+    .islamic-ornament-card {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .islamic-ornament-card::before {
+        content: '';
+        position: absolute;
+        width: 9rem;
+        height: 9rem;
+        right: -3.5rem;
+        top: -3.5rem;
+        border: 1rem double rgba(180, 139, 33, .1);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+}

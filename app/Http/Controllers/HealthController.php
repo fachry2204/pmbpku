@@ -1,0 +1,4 @@
+<?php
+namespace App\Http\Controllers;
+use Illuminate\Http\JsonResponse;use Illuminate\Support\Facades\{Cache,DB,Storage};
+class HealthController extends Controller { public function __invoke():JsonResponse{$checks=[];try{DB::select('SELECT 1');$checks['database']='ok';}catch(\Throwable){$checks['database']='error';}try{Cache::put('health.probe',true,10);$checks['cache']=Cache::get('health.probe')?'ok':'error';}catch(\Throwable){$checks['cache']='error';}try{$path='health/'.bin2hex(random_bytes(8));Storage::disk('local')->put($path,'ok');$checks['storage']=Storage::disk('local')->exists($path)?'ok':'error';Storage::disk('local')->delete($path);}catch(\Throwable){$checks['storage']='error';}$heartbeat=Cache::get('queue.heartbeat');$checks['queue']=$heartbeat&&now()->diffInMinutes($heartbeat)<5?'ok':'stale';$ok=!in_array('error',$checks,true);return response()->json(['status'=>$ok?'ok':'degraded','checks'=>$checks],$ok?200:503);} }

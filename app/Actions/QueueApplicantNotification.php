@@ -1,0 +1,4 @@
+<?php
+namespace App\Actions;
+use App\Jobs\SendApplicantNotification;use App\Models\{Applicant,NotificationLog};use App\Services\NotificationTemplateService;
+final class QueueApplicantNotification { public function __construct(private NotificationTemplateService $templates){} public function execute(Applicant $applicant,string $event,string $fallback):void{$message=$this->templates->render($event,$applicant,$fallback);foreach(['email','whatsapp'] as $channel){$recipient=$channel==='email'?preg_replace('/(^.).*(@.*$)/','$1***$2',$applicant->email):substr($applicant->whatsapp_normalized,0,4).'****'.substr($applicant->whatsapp_normalized,-3);$log=NotificationLog::firstOrCreate(['unique_key'=>"{$event}:{$channel}:{$applicant->id}"],['applicant_id'=>$applicant->id,'channel'=>$channel,'event_type'=>$event,'recipient_masked'=>$recipient,'status'=>'queued','attempts'=>0]);if($log->wasRecentlyCreated)SendApplicantNotification::dispatch($log->id,$message)->afterCommit();}}}

@@ -1,0 +1,5 @@
+<script setup lang="ts">
+import { Head, Link } from '@inertiajs/vue3';
+defineProps<{ applicant: { registration_number: string; full_name: string; payment_status: string } }>();
+</script>
+<template><Head title="Pendaftaran Berhasil"/><main class="grid min-h-screen place-items-center bg-emerald-50 p-5"><section class="max-w-lg rounded-3xl bg-white p-10 text-center shadow-xl"><div class="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-100 text-3xl text-emerald-800">✓</div><h1 class="mt-5 text-3xl font-bold text-emerald-950">Pendaftaran berhasil</h1><p class="mt-3 text-slate-600">Terima kasih, {{applicant.full_name}}. Simpan nomor pendaftaran berikut.</p><div class="my-6 rounded-xl bg-emerald-950 p-4 text-2xl font-bold tracking-wider text-white">{{applicant.registration_number}}</div><p class="text-sm text-slate-500">Status pembayaran: {{applicant.payment_status}}</p><Link href="/" class="mt-7 inline-block font-semibold text-emerald-800">Kembali ke beranda</Link></section></main></template>

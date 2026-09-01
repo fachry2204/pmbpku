@@ -1,0 +1,4 @@
+<?php
+namespace App\Http\Controllers\Admin;
+use App\Http\Controllers\Controller;use App\Jobs\SendApplicantNotification;use App\Models\NotificationLog;use Illuminate\Http\RedirectResponse;use Inertia\{Inertia,Response};
+class NotificationLogController extends Controller { public function index():Response{return Inertia::render('Admin/Logs/Notifications',['logs'=>NotificationLog::with('applicant:id,registration_number,full_name')->latest()->paginate(30)]);} public function retry(NotificationLog $notificationLog):RedirectResponse{abort_unless(in_array($notificationLog->status,['failed','skipped'],true),422);$notificationLog->update(['status'=>'queued','last_error'=>null]);SendApplicantNotification::dispatch($notificationLog->id,"Pembaruan PMB {$notificationLog->applicant?->registration_number}: {$notificationLog->event_type}.");return back()->with('success','Notifikasi masuk antrean ulang.');} }
