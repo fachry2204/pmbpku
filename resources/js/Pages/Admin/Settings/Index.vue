@@ -1,31 +1,38 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import { ref } from 'vue';
 
 type Field = { key: string; label: string; type: string; hint?: string };
 type Section = { title: string; description: string; accent: string; icon: string; fields: Field[] };
 
-const props = defineProps<{ values: Record<string, any> }>();
+const props = defineProps<{ values: Record<string, any>; callbackUrl: string; returnUrl: string }>();
 const form = useForm(Object.fromEntries(Object.entries(props.values).map(([key, value]) => [key.replaceAll('.', '_'), value])) as Record<string, any>);
+const copied = ref('');
+const copyUrl = async (label: string, value: string) => {
+  await navigator.clipboard.writeText(value);
+  copied.value = label;
+  window.setTimeout(() => { copied.value = ''; }, 1800);
+};
 
 const sections: Section[] = [
   { title: 'Pendaftaran', description: 'Atur biaya utama yang berlaku untuk setiap calon mahasiswa.', accent: 'bg-amber-50 text-amber-700', icon: 'Rp', fields: [
     { key: 'pmb_registration_fee', label: 'Harga Pendaftaran (Rp)', type: 'number', hint: 'Nominal biaya pendaftaran sebelum biaya layanan.' },
   ]},
   { title: 'Payment Gateway', description: 'Konfigurasi lingkungan dan kredensial pembayaran otomatis.', accent: 'bg-blue-50 text-blue-700', icon: 'PG', fields: [
-    { key: 'duitku_mode', label: 'Mode Gateway', type: 'select' },
-    { key: 'duitku_merchant_code', label: 'Merchant Code', type: 'password' },
-    { key: 'duitku_api_key', label: 'API Key', type: 'password' },
+    { key: 'duitku_mode', label: 'Mode Gateway', type: 'select', hint: 'Gunakan Sandbox untuk pengujian dan Production ketika pembayaran sudah aktif.' },
+    { key: 'duitku_merchant_code', label: 'Merchant Code', type: 'password', hint: 'Kode merchant dari dashboard penyedia pembayaran.' },
+    { key: 'duitku_api_key', label: 'API Key', type: 'password', hint: 'Kunci rahasia untuk autentikasi transaksi dan callback.' },
   ]},
   { title: 'WhatsApp / Fonnte', description: 'Hubungkan layanan pengiriman notifikasi WhatsApp.', accent: 'bg-emerald-50 text-emerald-700', icon: 'WA', fields: [
-    { key: 'fonnte_base_url', label: 'Base URL Fonnte', type: 'url' },
-    { key: 'fonnte_token', label: 'Token Fonnte', type: 'password' },
+    { key: 'fonnte_base_url', label: 'Base URL Fonnte', type: 'url', hint: 'Alamat API utama, biasanya https://api.fonnte.com.' },
+    { key: 'fonnte_token', label: 'Token Fonnte', type: 'password', hint: 'Token perangkat aktif dari dashboard Fonnte.' },
   ]},
   { title: 'Email / SMTP', description: 'Atur server email untuk pemberitahuan sistem.', accent: 'bg-violet-50 text-violet-700', icon: '@', fields: [
-    { key: 'mail_host', label: 'SMTP Host', type: 'text' },
-    { key: 'mail_port', label: 'SMTP Port', type: 'number' },
-    { key: 'mail_username', label: 'SMTP Username', type: 'password' },
-    { key: 'mail_password', label: 'SMTP App Password', type: 'password' },
-    { key: 'mail_from_address', label: 'From Address', type: 'email' },
+    { key: 'mail_host', label: 'SMTP Host', type: 'text', hint: 'Contoh: smtp.gmail.com atau server email domain.' },
+    { key: 'mail_port', label: 'SMTP Port', type: 'number', hint: 'Umumnya 587 untuk TLS atau 465 untuk SSL.' },
+    { key: 'mail_username', label: 'SMTP Username', type: 'password', hint: 'Nama pengguna atau alamat email akun SMTP.' },
+    { key: 'mail_password', label: 'SMTP App Password', type: 'password', hint: 'Gunakan app password, bukan password akun utama.' },
+    { key: 'mail_from_address', label: 'From Address', type: 'email', hint: 'Alamat pengirim yang terlihat oleh penerima email.' },
   ]},
 ];
 </script>
@@ -52,6 +59,24 @@ const sections: Section[] = [
               <small v-if="field.hint" class="mt-2 block text-xs leading-5 text-slate-400">{{ field.hint }}</small>
               <small v-if="form.errors[field.key]" class="mt-2 block text-xs font-semibold text-red-700">{{ form.errors[field.key] }}</small>
             </label>
+          </div>
+          <div v-if="section.title === 'Payment Gateway'" class="border-t border-slate-100 bg-blue-50/50 p-6">
+            <div class="flex items-start gap-3">
+              <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-blue-100 font-black text-blue-700">↗</span>
+              <div><h3 class="font-extrabold text-slate-900">URL Integrasi</h3><p class="mt-1 text-sm leading-6 text-slate-500">Salin URL berikut ke dashboard penyedia pembayaran. Pastikan domain sudah menggunakan HTTPS.</p></div>
+            </div>
+            <div class="mt-5 grid gap-4">
+              <div>
+                <label class="text-xs font-bold uppercase tracking-wider text-slate-500">Callback URL</label>
+                <div class="mt-2 flex gap-2"><input :value="callbackUrl" readonly class="min-w-0 flex-1 rounded-xl border-blue-200 bg-white px-4 py-3 font-mono text-sm text-slate-700"/><button type="button" class="shrink-0 rounded-xl bg-blue-700 px-4 text-sm font-bold text-white" @click="copyUrl('callback', callbackUrl)">{{ copied === 'callback' ? 'Tersalin ✓' : 'Salin' }}</button></div>
+                <p class="mt-2 text-xs leading-5 text-slate-500">Digunakan sistem pembayaran untuk mengirim status transaksi secara otomatis.</p>
+              </div>
+              <div>
+                <label class="text-xs font-bold uppercase tracking-wider text-slate-500">Return URL</label>
+                <div class="mt-2 flex gap-2"><input :value="returnUrl" readonly class="min-w-0 flex-1 rounded-xl border-blue-200 bg-white px-4 py-3 font-mono text-sm text-slate-700"/><button type="button" class="shrink-0 rounded-xl border border-blue-700 px-4 text-sm font-bold text-blue-700" @click="copyUrl('return', returnUrl)">{{ copied === 'return' ? 'Tersalin ✓' : 'Salin' }}</button></div>
+                <p class="mt-2 text-xs leading-5 text-slate-500">Halaman tujuan pengguna setelah menyelesaikan proses pembayaran.</p>
+              </div>
+            </div>
           </div>
         </section>
 

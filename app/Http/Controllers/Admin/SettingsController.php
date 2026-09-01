@@ -35,7 +35,11 @@ class SettingsController extends Controller
             $default = $key === 'pmb.registration_fee' ? 250000 : '';
             $values[$key] = $secret ? ($row ? '••••••••' : '') : ($row?->getDecodedValue() ?? $default);
         }
-        return Inertia::render('Admin/Settings/Index', ['values' => $values]);
+        return Inertia::render('Admin/Settings/Index', [
+            'values' => $values,
+            'callbackUrl' => route('webhooks.duitku'),
+            'returnUrl' => route('status.index'),
+        ]);
     }
 
     public function update(Request $request, SettingsService $settings): RedirectResponse
