@@ -61,7 +61,7 @@ const services=[
 
     <footer id="kontak" class="bg-[#032f25] text-white">
       <div class="mx-auto grid max-w-7xl gap-10 px-5 py-16 md:grid-cols-3">
-        <div><img src="/images/logo-pku-mui-jakarta.png" alt="Pendidikan Kader Ulama MUI Provinsi DKI Jakarta" class="h-auto w-full max-w-[390px] object-contain brightness-0 invert opacity-90"/><p class="mt-5 leading-7 text-emerald-50/65">Portal resmi penerimaan mahasiswa baru Pendidikan Kader Ulama.</p></div>
+        <div><img src="/images/logo-footer-pku.png" alt="Pendidikan Kader Ulama MUI Provinsi DKI Jakarta" class="h-auto w-full max-w-[390px] object-contain"/><p class="mt-5 leading-7 text-emerald-50/65">Portal resmi penerimaan mahasiswa baru Pendidikan Kader Ulama.</p></div>
         <div><h3 class="font-bold text-[#e4bd4a]">Tautan Cepat</h3><div class="mt-4 grid gap-3 text-sm text-emerald-50/70"><Link href="/pendaftaran">Pendaftaran</Link><Link href="/cek-status">Cek Status</Link></div></div>
         <div>
           <h3 class="font-bold text-[#e4bd4a]">Hubungi Panitia</h3>
