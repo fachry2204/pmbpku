@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 class RegistrationController extends Controller {
- public function create(DuitkuClient $duitku, SettingsService $settings):Response{$channels=[];$paymentError=null;$amount=(int)$settings->get('pmb.registration_fee',250000);try{$channels=Cache::remember('duitku.channels.'.config('services.duitku.mode').'.'.$amount,300,fn()=>$duitku->channels($amount));}catch(\Throwable){$paymentError='Metode pembayaran belum tersedia. Silakan hubungi panitia.';}return Inertia::render('Public/Register',['channels'=>$channels,'paymentError'=>$paymentError]);}
+ public function create(DuitkuClient $duitku, SettingsService $settings):Response{$channels=[];$paymentError=null;$amount=(int)$settings->get('pmb.registration_fee',250000);try{$channels=Cache::remember('duitku.channels.'.config('services.duitku.mode').'.'.$amount,300,fn()=>$duitku->channels($amount));}catch(\Throwable){$paymentError='Metode pembayaran belum tersedia. Silakan hubungi panitia.';}return Inertia::render('Public/Register',['channels'=>$channels,'paymentError'=>$paymentError,'registrationFee'=>$amount]);}
  public function store(StoreApplicantRequest $request,QueueApplicantNotification $notifications):RedirectResponse {
   $data=$request->validated(); $phone=IndonesianPhone::normalize($data['whatsapp']);
   $applicant=DB::transaction(function()use($request,$data,$phone){

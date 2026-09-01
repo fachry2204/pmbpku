@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
 type Field = { key: string; label: string; type: string; hint?: string };
 type Section = { title: string; description: string; accent: string; icon: string; fields: Field[] };
 
 const props = defineProps<{ values: Record<string, any>; callbackUrl: string; returnUrl: string }>();
+const page = usePage() as any;
 const form = useForm(Object.fromEntries(Object.entries(props.values).map(([key, value]) => [key.replaceAll('.', '_'), value])) as Record<string, any>);
 const copied = ref('');
 const copyUrl = async (label: string, value: string) => {
@@ -46,6 +47,10 @@ const sections: Section[] = [
       <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Setiap integrasi dipisahkan berdasarkan fungsinya. Nilai rahasia terenkripsi dan tidak pernah dikirim kembali ke browser; biarkan nilai bertanda titik untuk mempertahankan secret lama.</p>
 
       <form class="mt-7 space-y-6" @submit.prevent="form.put('/admin/settings')">
+        <div v-if="page.props.flash?.success" class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 font-semibold text-emerald-800">{{ page.props.flash.success }}</div>
+        <div v-if="Object.keys(form.errors).length" class="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <b>Pengaturan belum tersimpan.</b> Periksa kolom yang ditandai merah di bawah, lalu simpan kembali.
+        </div>
         <section v-for="section in sections" :key="section.title" class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <header class="flex items-start gap-4 border-b border-slate-100 px-6 py-5">
             <span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-sm font-black" :class="section.accent">{{ section.icon }}</span>

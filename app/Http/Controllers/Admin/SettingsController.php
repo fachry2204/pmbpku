@@ -33,7 +33,8 @@ class SettingsController extends Controller
         foreach (self::KEYS as $key => [$type, $secret]) {
             $row = $stored->get($key);
             $default = $key === 'pmb.registration_fee' ? 250000 : '';
-            $values[$key] = $secret ? ($row ? '••••••••' : '') : ($row?->getDecodedValue() ?? $default);
+            $value = $row?->getDecodedValue() ?? $default;
+            $values[$key] = $secret ? ($row ? '••••••••' : '') : ($key === 'mail.port' && (int) $value === 0 ? '' : $value);
         }
         return Inertia::render('Admin/Settings/Index', [
             'values' => $values,
@@ -44,6 +45,12 @@ class SettingsController extends Controller
 
     public function update(Request $request, SettingsService $settings): RedirectResponse
     {
+        // An empty number input can arrive as 0 from older saved settings. SMTP is
+        // optional, so do not let that invalidate and roll back unrelated settings.
+        if (in_array($request->input('mail_port'), [null, '', 0, '0'], true)) {
+            $request->merge(['mail_port' => null]);
+        }
+
         $data = $request->validate([
             'pmb_registration_fee' => ['required', 'integer', 'min:1000', 'max:100000000'],
             'duitku_mode' => ['nullable', 'in:sandbox,production'],

@@ -1,14 +1,21 @@
 <script setup lang="ts">
-import {Head,Link,useForm} from '@inertiajs/vue3';import {computed,ref} from 'vue';
-const props=defineProps<{channels:any[],paymentError:string|null}>();
+import {Head,Link,useForm} from '@inertiajs/vue3';import {computed,onMounted,ref,watch} from 'vue';
+const props=defineProps<{channels:any[],paymentError:string|null,registrationFee:number}>();
 const step=ref(1);
-const form=useForm({submission_uuid:crypto.randomUUID(),payment_method:'',full_name:'',birth_place:'',birth_date:'',address:'',whatsapp:'',email:'',consent:false,recommendation_letter:null as File|null,diploma:null as File|null,photo_4x6:null as File|null,identity_card:null as File|null,pddikti_screenshot:null as File|null});
+const restored=ref(false);
+const DRAFT_KEY='pmb-registration-draft-v1';
+const form=useForm({submission_uuid:crypto.randomUUID() as string,payment_method:'',full_name:'',birth_place:'',birth_date:'',address:'',whatsapp:'',email:'',consent:false,recommendation_letter:null as File|null,diploma:null as File|null,photo_4x6:null as File|null,identity_card:null as File|null,pddikti_screenshot:null as File|null});
 const docs=[['recommendation_letter','Surat rekomendasi','Surat rekomendasi atau keterangan resmi'],['diploma','Ijazah','Ijazah S1/sederajat/Pondok Pesantren'],['photo_4x6','Foto 4×6','JPG atau PNG lebih disarankan'],['identity_card','KTP','Kartu Tanda Penduduk yang jelas'],['pddikti_screenshot','Screenshot PDDIKTI','Tangkapan layar data PDDIKTI']] as const;
 const dataReady=computed(()=>form.full_name.length>=3&&form.birth_place.length>=2&&!!form.birth_date&&!!form.address&&!!form.whatsapp&&!!form.email);
 const docsReady=computed(()=>docs.every(([key])=>!!form[key]));
+const rupiah=(value:number)=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(value);
 const next=()=>{if(step.value===1&&dataReady.value)step.value=2;else if(step.value===2&&docsReady.value)step.value=3;};
 const fileName=(key:typeof docs[number][0])=>form[key]?.name||'Belum ada file';
-const submit=()=>form.post('/pendaftaran',{forceFormData:true,preserveScroll:true});
+const draftFields=['submission_uuid','full_name','birth_place','birth_date','address','whatsapp','email'] as const;
+const saveDraft=()=>{const data=Object.fromEntries(draftFields.map(key=>[key,form[key]]));localStorage.setItem(DRAFT_KEY,JSON.stringify({data,step:step.value}));};
+onMounted(()=>{try{const draft=JSON.parse(localStorage.getItem(DRAFT_KEY)||'null');if(!draft?.data)return;draftFields.forEach(key=>{if(typeof draft.data[key]==='string')form[key]=draft.data[key]});restored.value=true;step.value=draft.step>=2&&dataReady.value?2:1;}catch{localStorage.removeItem(DRAFT_KEY);}});
+watch([step,...draftFields.map(key=>()=>form[key])],saveDraft);
+const submit=()=>form.post('/pendaftaran',{forceFormData:true,preserveScroll:true,onSuccess:()=>localStorage.removeItem(DRAFT_KEY)});
 </script>
 
 <template>
@@ -29,13 +36,14 @@ const submit=()=>form.post('/pendaftaran',{forceFormData:true,preserveScroll:tru
         </section>
 
         <section v-show="step===2" class="space-y-4">
+          <div v-if="restored" class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">Data diri berhasil dipulihkan. Demi keamanan browser, silakan pilih ulang semua dokumen.</div>
           <label v-for="[key,label,hint] in docs" :key="key" class="group flex cursor-pointer flex-col gap-4 rounded-2xl border border-slate-200 p-5 transition hover:border-[#07805c] hover:bg-emerald-50/40 sm:flex-row sm:items-center"><span class="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-emerald-100 text-xl text-[#087154]">▣</span><span class="min-w-0 flex-1"><b class="block text-slate-800">{{label}} <span class="text-red-600">*</span></b><small class="text-slate-500">{{hint}}</small><span class="mt-1 block truncate text-xs font-semibold" :class="form[key]?'text-[#07805c]':'text-slate-400'">{{fileName(key)}}</span></span><span class="rounded-lg border border-[#087154] px-4 py-2 text-sm font-bold text-[#087154]">Pilih File</span><input type="file" accept=".jpg,.jpeg,.png,.pdf" class="sr-only" required @change="form[key]=(($event.target as HTMLInputElement).files?.[0]||null)"/></label>
         </section>
 
         <section v-show="step===3">
           <div v-if="paymentError" class="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{{paymentError}}</div>
           <div v-if="channels.length" class="grid gap-4 sm:grid-cols-2"><label v-for="channel in channels" :key="channel.code" class="flex cursor-pointer items-center gap-4 rounded-2xl border-2 p-5 transition" :class="form.payment_method===channel.code?'border-[#07805c] bg-emerald-50':'border-slate-100 hover:border-emerald-200'"><input v-model="form.payment_method" type="radio" :value="channel.code" required class="text-[#07805c] focus:ring-[#07805c]"/><img v-if="channel.icon_url" :src="channel.icon_url" alt="" class="h-9 w-16 object-contain"/><span><b class="block text-[#064e3b]">{{channel.name}}</b><small class="text-slate-500">{{channel.group}} · {{channel.code}}</small></span></label></div>
-          <div class="mt-6 rounded-xl bg-slate-50 p-5"><div class="flex justify-between text-sm"><span>Biaya pendaftaran</span><b>Dihitung oleh sistem</b></div><div class="mt-3 flex justify-between border-t pt-3 text-sm"><span>Biaya layanan</span><b>Sesuai metode pembayaran</b></div><p class="mt-4 text-xs leading-5 text-slate-500">Setelah data tersimpan, Anda akan masuk ke halaman konfirmasi pembayaran.</p></div>
+          <div class="mt-6 rounded-xl bg-slate-50 p-5"><div class="flex justify-between text-sm"><span>Biaya pendaftaran</span><b>{{ rupiah(props.registrationFee) }}</b></div><div class="mt-3 flex justify-between border-t pt-3 text-sm"><span>Biaya layanan</span><b>Sesuai metode pembayaran</b></div><p class="mt-4 text-xs leading-5 text-slate-500">Setelah data tersimpan, Anda akan masuk ke halaman konfirmasi pembayaran.</p></div>
           <label class="mt-5 flex gap-3 rounded-xl border border-emerald-100 bg-emerald-50 p-4"><input v-model="form.consent" type="checkbox" required class="mt-1 text-[#07805c] focus:ring-[#07805c]"/><span class="text-sm leading-6">Saya menyatakan data dan dokumen benar serta telah membaca dan menyetujui <Link href="/syarat-dan-ketentuan" target="_blank" class="font-bold text-[#067052] underline decoration-emerald-300 underline-offset-2">Syarat dan Ketentuan</Link> PMB.</span></label>
         </section>
 
