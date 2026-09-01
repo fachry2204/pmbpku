@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreApplicantRequest;
 use App\Models\{AdmissionPeriod,Applicant};
 use App\Support\IndonesianPhone;
-use App\Services\Duitku\DuitkuClient;
+use App\Services\PaymentGatewayService;
 use App\Services\SettingsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\{Cache,DB,Hash};
@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 class RegistrationController extends Controller {
- public function create(DuitkuClient $duitku, SettingsService $settings):Response{$channels=[];$paymentError=null;$amount=(int)$settings->get('pmb.registration_fee',250000);try{$channels=Cache::remember('duitku.channels.'.config('services.duitku.mode').'.'.$amount,300,fn()=>$duitku->channels($amount));}catch(\Throwable){$paymentError='Metode pembayaran belum tersedia. Silakan hubungi panitia.';}return Inertia::render('Public/Register',['channels'=>$channels,'paymentError'=>$paymentError,'registrationFee'=>$amount]);}
+ public function create(PaymentGatewayService $gateway, SettingsService $settings):Response{$channels=[];$paymentError=null;$amount=(int)$settings->get('pmb.registration_fee',250000);try{$channels=Cache::remember('payment.channels.'.$gateway->provider().'.'.$gateway->mode().'.'.$amount,300,fn()=>$gateway->channels($amount));}catch(\Throwable){$paymentError='Metode pembayaran belum tersedia. Silakan hubungi panitia.';}return Inertia::render('Public/Register',['channels'=>$channels,'paymentError'=>$paymentError,'registrationFee'=>$amount]);}
  public function store(StoreApplicantRequest $request,QueueApplicantNotification $notifications):RedirectResponse {
   $data=$request->validated(); $phone=IndonesianPhone::normalize($data['whatsapp']);
   $applicant=DB::transaction(function()use($request,$data,$phone){

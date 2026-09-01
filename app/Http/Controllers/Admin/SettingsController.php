@@ -16,9 +16,14 @@ class SettingsController extends Controller
 {
     private const KEYS = [
         'pmb.registration_fee' => ['integer', false],
+        'payment.provider' => ['string', false],
         'duitku.mode' => ['string', false],
         'duitku.merchant_code' => ['string', false],
         'duitku.api_key' => ['string', true],
+        'tripay.mode' => ['string', false],
+        'tripay.merchant_code' => ['string', false],
+        'tripay.api_key' => ['string', true],
+        'tripay.private_key' => ['string', true],
         'fonnte.base_url' => ['string', false],
         'fonnte.token' => ['string', true],
         'mail.host' => ['string', false],
@@ -35,13 +40,14 @@ class SettingsController extends Controller
         $values = [];
         foreach (self::KEYS as $key => [$type, $secret]) {
             $row = $stored->get($key);
-            $default = $key === 'pmb.registration_fee' ? 250000 : '';
+            $default = match ($key) { 'pmb.registration_fee' => 250000, 'payment.provider' => 'duitku', 'duitku.mode', 'tripay.mode' => 'sandbox', default => '' };
             $value = $row?->getDecodedValue() ?? $default;
             $values[$key] = $secret ? ($row ? '••••••••' : '') : ($key === 'mail.port' && (int) $value === 0 ? '' : $value);
         }
         return Inertia::render('Admin/Settings/Index', [
             'values' => $values,
             'callbackUrl' => route('webhooks.duitku'),
+            'tripayCallbackUrl' => route('webhooks.tripay'),
             'returnUrl' => route('status.index'),
         ]);
     }
@@ -56,9 +62,14 @@ class SettingsController extends Controller
 
         $data = $request->validate([
             'pmb_registration_fee' => ['required', 'integer', 'min:1000', 'max:100000000'],
+            'payment_provider' => ['required', 'in:duitku,tripay'],
             'duitku_mode' => ['nullable', 'in:sandbox,production'],
             'duitku_merchant_code' => ['nullable', 'string', 'max:100'],
             'duitku_api_key' => ['nullable', 'string', 'max:500'],
+            'tripay_mode' => ['nullable', 'in:sandbox,production'],
+            'tripay_merchant_code' => ['nullable', 'string', 'max:100'],
+            'tripay_api_key' => ['nullable', 'string', 'max:500'],
+            'tripay_private_key' => ['nullable', 'string', 'max:500'],
             'fonnte_base_url' => ['nullable', 'url', 'max:500'],
             'fonnte_token' => ['nullable', 'string', 'max:500'],
             'mail_host' => ['nullable', 'string', 'max:255'],

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
 type Field = { key: string; label: string; type: string; hint?: string };
 type Section = { title: string; description: string; accent: string; icon: string; fields: Field[] };
 
-const props = defineProps<{ values: Record<string, any>; callbackUrl: string; returnUrl: string }>();
+const props = defineProps<{ values: Record<string, any>; callbackUrl: string; tripayCallbackUrl: string; returnUrl: string }>();
 const page = usePage() as any;
 const form = useForm(Object.fromEntries(Object.entries(props.values).map(([key, value]) => [key.replaceAll('.', '_'), value])) as Record<string, any>);
 const testForm = useForm({ test_email_recipient: '' });
@@ -16,14 +16,22 @@ const copyUrl = async (label: string, value: string) => {
   window.setTimeout(() => { copied.value = ''; }, 1800);
 };
 
-const sections: Section[] = [
+const sections = computed<Section[]>(() => [
   { title: 'Pendaftaran', description: 'Atur biaya utama yang berlaku untuk setiap calon mahasiswa.', accent: 'bg-amber-50 text-amber-700', icon: 'Rp', fields: [
     { key: 'pmb_registration_fee', label: 'Harga Pendaftaran (Rp)', type: 'number', hint: 'Nominal biaya pendaftaran sebelum biaya layanan.' },
   ]},
   { title: 'Payment Gateway', description: 'Konfigurasi lingkungan dan kredensial pembayaran otomatis.', accent: 'bg-blue-50 text-blue-700', icon: 'PG', fields: [
-    { key: 'duitku_mode', label: 'Mode Gateway', type: 'select', hint: 'Gunakan Sandbox untuk pengujian dan Production ketika pembayaran sudah aktif.' },
-    { key: 'duitku_merchant_code', label: 'Merchant Code', type: 'password', hint: 'Kode merchant dari dashboard penyedia pembayaran.' },
-    { key: 'duitku_api_key', label: 'API Key', type: 'password', hint: 'Kunci rahasia untuk autentikasi transaksi dan callback.' },
+    { key: 'payment_provider', label: 'Penyedia Payment Gateway', type: 'provider', hint: 'Pilih satu provider yang digunakan pada halaman pendaftaran.' },
+    ...(form.payment_provider === 'tripay' ? [
+      { key: 'tripay_mode', label: 'Mode Tripay', type: 'select', hint: 'Gunakan kredensial yang sesuai dengan mode Sandbox atau Production.' },
+      { key: 'tripay_merchant_code', label: 'Merchant Code Tripay', type: 'password', hint: 'Kode merchant dari dashboard Tripay.' },
+      { key: 'tripay_api_key', label: 'API Key Tripay', type: 'password', hint: 'Digunakan sebagai Bearer token untuk mengakses API Tripay.' },
+      { key: 'tripay_private_key', label: 'Private Key Tripay', type: 'password', hint: 'Kunci rahasia untuk signature transaksi dan validasi callback.' },
+    ] : [
+      { key: 'duitku_mode', label: 'Mode Duitku', type: 'select', hint: 'Gunakan kredensial yang sesuai dengan mode Sandbox atau Production.' },
+      { key: 'duitku_merchant_code', label: 'Merchant Code Duitku', type: 'password', hint: 'Kode merchant dari dashboard Duitku.' },
+      { key: 'duitku_api_key', label: 'API Key Duitku', type: 'password', hint: 'Kunci rahasia untuk autentikasi transaksi dan callback.' },
+    ]),
   ]},
   { title: 'WhatsApp / Fonnte', description: 'Hubungkan layanan pengiriman notifikasi WhatsApp.', accent: 'bg-emerald-50 text-emerald-700', icon: 'WA', fields: [
     { key: 'fonnte_base_url', label: 'Base URL Fonnte', type: 'url', hint: 'Alamat API utama, biasanya https://api.fonnte.com.' },
@@ -37,7 +45,7 @@ const sections: Section[] = [
     { key: 'mail_from_address', label: 'From Address', type: 'email', hint: 'Alamat pengirim yang terlihat oleh penerima email.' },
     { key: 'mail_from_name', label: 'Nama Pengirim', type: 'text', hint: 'Contoh: Panitia PMB Pendidikan Kader Ulama.' },
   ]},
-];
+]);
 </script>
 
 <template>
@@ -62,7 +70,8 @@ const sections: Section[] = [
           <div class="grid gap-5 p-6 md:grid-cols-2">
             <label v-for="field in section.fields" :key="field.key" class="block" :class="section.fields.length === 1 ? 'md:max-w-md' : ''">
               <span class="text-sm font-bold text-slate-700">{{ field.label }}</span>
-              <select v-if="field.type === 'select'" v-model="form[field.key]" class="mt-2 w-full rounded-xl border-slate-300 bg-white px-4 py-3 focus:border-emerald-600 focus:ring-emerald-600"><option value="sandbox">Sandbox</option><option value="production">Production</option></select>
+              <select v-if="field.type === 'provider'" v-model="form[field.key]" class="mt-2 w-full rounded-xl border-slate-300 bg-white px-4 py-3 focus:border-emerald-600 focus:ring-emerald-600"><option value="duitku">Duitku</option><option value="tripay">Tripay</option></select>
+              <select v-else-if="field.type === 'select'" v-model="form[field.key]" class="mt-2 w-full rounded-xl border-slate-300 bg-white px-4 py-3 focus:border-emerald-600 focus:ring-emerald-600"><option value="sandbox">Sandbox</option><option value="production">Production</option></select>
               <input v-else v-model="form[field.key]" :type="field.type" class="mt-2 w-full rounded-xl border-slate-300 bg-white px-4 py-3 focus:border-emerald-600 focus:ring-emerald-600" autocomplete="off" />
               <small v-if="field.hint" class="mt-2 block text-xs leading-5 text-slate-400">{{ field.hint }}</small>
               <small v-if="form.errors[field.key]" class="mt-2 block text-xs font-semibold text-red-700">{{ form.errors[field.key] }}</small>
@@ -76,7 +85,7 @@ const sections: Section[] = [
             <div class="mt-5 grid gap-4">
               <div>
                 <label class="text-xs font-bold uppercase tracking-wider text-slate-500">Callback URL</label>
-                <div class="mt-2 flex gap-2"><input :value="callbackUrl" readonly class="min-w-0 flex-1 rounded-xl border-blue-200 bg-white px-4 py-3 font-mono text-sm text-slate-700"/><button type="button" class="shrink-0 rounded-xl bg-blue-700 px-4 text-sm font-bold text-white" @click="copyUrl('callback', callbackUrl)">{{ copied === 'callback' ? 'Tersalin ✓' : 'Salin' }}</button></div>
+                <div class="mt-2 flex gap-2"><input :value="form.payment_provider === 'tripay' ? tripayCallbackUrl : callbackUrl" readonly class="min-w-0 flex-1 rounded-xl border-blue-200 bg-white px-4 py-3 font-mono text-sm text-slate-700"/><button type="button" class="shrink-0 rounded-xl bg-blue-700 px-4 text-sm font-bold text-white" @click="copyUrl('callback', form.payment_provider === 'tripay' ? tripayCallbackUrl : callbackUrl)">{{ copied === 'callback' ? 'Tersalin ✓' : 'Salin' }}</button></div>
                 <p class="mt-2 text-xs leading-5 text-slate-500">Digunakan sistem pembayaran untuk mengirim status transaksi secara otomatis.</p>
               </div>
               <div>

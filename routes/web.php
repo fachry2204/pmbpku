@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\Public\RegistrationController;
 use App\Http\Controllers\Webhooks\DuitkuWebhookController;
+use App\Http\Controllers\Webhooks\TripayWebhookController;
 use App\Http\Controllers\Public\StatusLookupController;
 use App\Http\Controllers\Public\PaymentController;
 use App\Http\Controllers\Public\DocumentRevisionController;
@@ -31,6 +32,7 @@ Route::post('/cek-status',[StatusLookupController::class,'lookup'])->middleware(
 Route::get('/cek-status/detail',[StatusLookupController::class,'show'])->name('status.show');
 Route::post('/cek-status/{applicant}/documents/{type}/revision',DocumentRevisionController::class)->middleware('throttle:5,10')->name('status.document-revision');
 Route::post('/webhooks/duitku',DuitkuWebhookController::class)->middleware('throttle:120,1')->name('webhooks.duitku');
+Route::post('/webhooks/tripay',TripayWebhookController::class)->middleware('throttle:120,1')->name('webhooks.tripay');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

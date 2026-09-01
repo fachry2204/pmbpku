@@ -39,6 +39,13 @@ return [
         'merchant_code' => env('DUITKU_MERCHANT_CODE'),
         'api_key' => env('DUITKU_API_KEY'),
     ],
+
+    'tripay' => [
+        'mode' => env('TRIPAY_MODE', 'sandbox'),
+        'merchant_code' => env('TRIPAY_MERCHANT_CODE'),
+        'api_key' => env('TRIPAY_API_KEY'),
+        'private_key' => env('TRIPAY_PRIVATE_KEY'),
+    ],
     'fonnte' => [
         'base_url' => env('FONNTE_BASE_URL', 'https://api.fonnte.com'),
         'token' => env('FONNTE_TOKEN'),

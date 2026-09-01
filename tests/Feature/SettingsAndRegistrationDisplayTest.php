@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Setting;
 use App\Models\User;
-use App\Services\Duitku\DuitkuClient;
+use App\Services\PaymentGatewayService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -18,7 +18,11 @@ class SettingsAndRegistrationDisplayTest extends TestCase
     public function test_registration_page_receives_the_configured_fee(): void
     {
         Setting::create(['group' => 'pmb', 'key' => 'pmb.registration_fee', 'value' => '375000', 'type' => 'integer', 'is_encrypted' => false]);
-        $this->mock(DuitkuClient::class, fn (MockInterface $mock) => $mock->shouldReceive('channels')->once()->with(375000)->andReturn([]));
+        $this->mock(PaymentGatewayService::class, function (MockInterface $mock) {
+            $mock->shouldReceive('provider')->andReturn('duitku');
+            $mock->shouldReceive('mode')->andReturn('sandbox');
+            $mock->shouldReceive('channels')->once()->with(375000)->andReturn([]);
+        });
 
         $this->get('/pendaftaran')->assertOk()->assertInertia(
             fn (Assert $page) => $page->component('Public/Register')->where('registrationFee', 375000)
@@ -31,6 +35,7 @@ class SettingsAndRegistrationDisplayTest extends TestCase
 
         $this->actingAs($admin)->put('/admin/settings', [
             'pmb_registration_fee' => 375000,
+            'payment_provider' => 'duitku',
             'duitku_mode' => 'sandbox',
             'duitku_merchant_code' => 'D12345',
             'duitku_api_key' => 'secret-key',
