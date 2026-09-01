@@ -47,7 +47,9 @@ class SettingsController extends Controller
         return Inertia::render('Admin/Settings/Index', [
             'values' => $values,
             'callbackUrl' => route('webhooks.duitku'),
-            'tripayCallbackUrl' => route('webhooks.tripay'),
+            // Build public integration URLs directly so the settings screen can
+            // still open while a deployment is replacing an older route cache.
+            'tripayCallbackUrl' => url('/webhooks/tripay'),
             'returnUrl' => route('status.index'),
         ]);
     }

@@ -44,7 +44,7 @@ class TripayClient
             'customer_name' => $applicant->full_name, 'customer_email' => $applicant->email,
             'customer_phone' => $applicant->whatsapp_normalized,
             'order_items' => [['sku' => 'PMB-PKU', 'name' => 'Biaya Pendaftaran PMB PKU', 'price' => $amount, 'quantity' => 1]],
-            'callback_url' => route('webhooks.tripay'), 'return_url' => route('status.index'),
+            'callback_url' => url('/webhooks/tripay'), 'return_url' => route('status.index'),
             'expired_time' => now()->addDay()->timestamp,
             'signature' => hash_hmac('sha256', $merchant.$merchantRef.$amount, $privateKey),
         ];

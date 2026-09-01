@@ -15,6 +15,17 @@ class SettingsAndRegistrationDisplayTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_super_admin_can_open_settings_with_both_gateway_urls(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin', 'is_active' => true]);
+
+        $this->actingAs($admin)->get('/admin/settings')->assertOk()->assertInertia(
+            fn (Assert $page) => $page->component('Admin/Settings/Index')
+                ->where('callbackUrl', route('webhooks.duitku'))
+                ->where('tripayCallbackUrl', url('/webhooks/tripay'))
+        );
+    }
+
     public function test_registration_page_receives_the_configured_fee(): void
     {
         Setting::create(['group' => 'pmb', 'key' => 'pmb.registration_fee', 'value' => '375000', 'type' => 'integer', 'is_encrypted' => false]);
