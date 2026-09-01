@@ -26,6 +26,16 @@ class SettingsAndRegistrationDisplayTest extends TestCase
         );
     }
 
+    public function test_settings_page_survives_an_unreadable_encrypted_credential(): void
+    {
+        Setting::create(['group' => 'tripay', 'key' => 'tripay.private_key', 'value' => 'broken-ciphertext', 'type' => 'string', 'is_encrypted' => true]);
+        $admin = User::factory()->create(['role' => 'super_admin', 'is_active' => true]);
+
+        $this->actingAs($admin)->get('/admin/settings')->assertOk()->assertInertia(
+            fn (Assert $page) => $page->where('unreadableSettings.0', 'tripay.private_key')
+        );
+    }
+
     public function test_registration_page_receives_the_configured_fee(): void
     {
         Setting::create(['group' => 'pmb', 'key' => 'pmb.registration_fee', 'value' => '375000', 'type' => 'integer', 'is_encrypted' => false]);

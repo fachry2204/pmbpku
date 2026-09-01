@@ -5,7 +5,7 @@ import { computed, ref } from 'vue';
 type Field = { key: string; label: string; type: string; hint?: string };
 type Section = { title: string; description: string; accent: string; icon: string; fields: Field[] };
 
-const props = defineProps<{ values: Record<string, any>; callbackUrl: string; tripayCallbackUrl: string; returnUrl: string }>();
+const props = defineProps<{ values: Record<string, any>; callbackUrl: string; tripayCallbackUrl: string; returnUrl: string; unreadableSettings: string[] }>();
 const page = usePage() as any;
 const form = useForm(Object.fromEntries(Object.entries(props.values).map(([key, value]) => [key.replaceAll('.', '_'), value])) as Record<string, any>);
 const testForm = useForm({ test_email_recipient: '' });
@@ -59,6 +59,9 @@ const sections = computed<Section[]>(() => [
       <form class="mt-7 space-y-6" @submit.prevent="form.put('/admin/settings')">
         <div v-if="page.props.flash?.success" class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 font-semibold text-emerald-800">{{ page.props.flash.success }}</div>
         <div v-if="page.props.flash?.error" class="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800">{{ page.props.flash.error }}</div>
+        <div v-if="unreadableSettings.length" class="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+          <b>Beberapa kredensial lama tidak dapat dibaca.</b> Kemungkinan APP_KEY server berubah. Masukkan ulang kolom rahasia berikut lalu simpan: {{ unreadableSettings.join(', ') }}.
+        </div>
         <div v-if="Object.keys(form.errors).length" class="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           <b>Pengaturan belum tersimpan.</b> Periksa kolom yang ditandai merah di bawah, lalu simpan kembali.
         </div>

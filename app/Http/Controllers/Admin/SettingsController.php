@@ -38,11 +38,20 @@ class SettingsController extends Controller
     {
         $stored = Setting::whereIn('key', array_keys(self::KEYS))->get()->keyBy('key');
         $values = [];
+        $unreadableSettings = [];
         foreach (self::KEYS as $key => [$type, $secret]) {
             $row = $stored->get($key);
             $default = match ($key) { 'pmb.registration_fee' => 250000, 'payment.provider' => 'duitku', 'duitku.mode', 'tripay.mode' => 'sandbox', default => '' };
-            $value = $row?->getDecodedValue() ?? $default;
-            $values[$key] = $secret ? ($row ? '••••••••' : '') : ($key === 'mail.port' && (int) $value === 0 ? '' : $value);
+            try {
+                $value = $row?->getDecodedValue() ?? $default;
+                $values[$key] = $secret ? ($row ? '••••••••' : '') : ($key === 'mail.port' && (int) $value === 0 ? '' : $value);
+            } catch (Throwable) {
+                // A changed APP_KEY or damaged ciphertext must not make the
+                // entire administration page unavailable. Ask for this one
+                // credential again without exposing its stored value.
+                $values[$key] = $secret ? '' : $default;
+                $unreadableSettings[] = $key;
+            }
         }
         return Inertia::render('Admin/Settings/Index', [
             'values' => $values,
@@ -51,6 +60,7 @@ class SettingsController extends Controller
             // still open while a deployment is replacing an older route cache.
             'tripayCallbackUrl' => url('/webhooks/tripay'),
             'returnUrl' => route('status.index'),
+            'unreadableSettings' => $unreadableSettings,
         ]);
     }
 
