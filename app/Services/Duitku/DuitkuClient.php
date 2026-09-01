@@ -50,19 +50,39 @@ class DuitkuClient
     public function create(Applicant $applicant, string $method, string $merchantOrderId, int $amount): array
     {
         [$merchant, $apiKey] = $this->credentials();
-        return $this->http()->post($this->base().'/webapi/api/merchant/v2/inquiry', [
+        $localPhone = preg_replace('/^62/', '0', $applicant->whatsapp_normalized);
+        $names = preg_split('/\s+/', trim($applicant->full_name), 2);
+        $payload = [
             'merchantCode' => $merchant,
             'paymentAmount' => $amount,
             'paymentMethod' => $method,
             'merchantOrderId' => $merchantOrderId,
             'productDetails' => 'Biaya Pendaftaran PMB '.$applicant->registration_number,
             'email' => $applicant->email,
-            'phoneNumber' => $applicant->whatsapp_normalized,
+            'phoneNumber' => $localPhone,
             'customerVaName' => mb_substr($applicant->full_name, 0, 20),
+            'itemDetails' => [[
+                'name' => 'Biaya Pendaftaran PMB PKU',
+                'price' => $amount,
+                'quantity' => 1,
+            ]],
+            'customerDetail' => [
+                'firstName' => mb_substr($names[0] ?? $applicant->full_name, 0, 50),
+                'lastName' => mb_substr($names[1] ?? '', 0, 50),
+                'email' => $applicant->email,
+                'phoneNumber' => $localPhone,
+            ],
             'callbackUrl' => route('webhooks.duitku'),
             'returnUrl' => route('status.index'),
             'signature' => DuitkuSignature::inquiry($merchant, $merchantOrderId, $amount, $apiKey),
             'expiryPeriod' => 1440,
-        ])->throw()->json();
+        ];
+        $response = $this->http()->post($this->base().'/webapi/api/merchant/v2/inquiry', $payload);
+        $data = $response->json() ?: [];
+        if (! $response->successful() || ($data['statusCode'] ?? '') !== '00' || empty($data['reference']) || empty($data['paymentUrl'])) {
+            $message = $data['statusMessage'] ?? $data['Message'] ?? $data['message'] ?? 'Transaksi ditolak oleh Duitku.';
+            throw new RuntimeException('Duitku: '.str($message)->limit(300));
+        }
+        return $data;
     }
 }

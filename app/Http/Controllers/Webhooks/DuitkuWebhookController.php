@@ -34,7 +34,7 @@ class DuitkuWebhookController extends Controller
             $before = $payment->status;
             if ($before !== $mapped) {
                 $payment->update(['status' => $mapped, 'paid_at' => $mapped === 'paid' ? now() : $payment->paid_at]);
-                $payment->applicant()->update(['payment_status' => $mapped, 'paid_at' => $mapped === 'paid' ? now() : null]);
+                $payment->applicant->update(['payment_status' => $mapped, 'paid_at' => $mapped === 'paid' ? now() : null]);
                 DB::table('status_histories')->insert([
                     'applicant_id' => $payment->applicant_id, 'dimension' => 'payment', 'from_status' => $before, 'to_status' => $mapped,
                     'note' => 'Callback Duitku terverifikasi', 'changed_by_type' => null, 'changed_by_id' => null, 'created_at' => now(),

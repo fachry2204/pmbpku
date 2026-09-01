@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\{Cache, DB};
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\{Inertia, Response};
+use Throwable;
 
 class PaymentController extends Controller
 {
@@ -48,7 +49,16 @@ class PaymentController extends Controller
         $merchantRef = 'PMB-'.now()->format('Ymd').'-'.Str::upper(Str::random(12));
         $amount = $this->amount($applicant, $settings);
         $provider = $gateway->provider();
-        $remote = $gateway->create($applicant, $data['method'], $merchantRef, $amount);
+        try {
+            $remote = $gateway->create($applicant, $data['method'], $merchantRef, $amount);
+        } catch (Throwable $exception) {
+            report($exception);
+            throw ValidationException::withMessages([
+                'method' => app()->isProduction()
+                    ? 'Transaksi pembayaran belum dapat dibuat. Periksa kembali metode pembayaran atau hubungi panitia.'
+                    : $exception->getMessage(),
+            ]);
+        }
         $isTripay = $provider === 'tripay';
         $payment = DB::transaction(fn () => Payment::create([
             'applicant_id' => $applicant->id, 'provider' => $provider, 'merchant_ref' => $merchantRef,

@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Applicant;
+use App\Observers\ApplicantObserver;
 use App\Services\SettingsService;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Vite;
@@ -22,6 +24,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Applicant::observe(ApplicantObserver::class);
         Vite::prefetch(concurrency: 3);
         try {
             if (Schema::hasTable('settings')) {

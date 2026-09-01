@@ -18,6 +18,7 @@ const rupiah = (value: number) => new Intl.NumberFormat('id-ID', { style: 'curre
         <h2 class="text-xl font-bold">Pembayaran otomatis</h2>
         <div v-if="error" class="mt-3 rounded-xl bg-amber-50 p-4 text-amber-900">{{ error }}</div>
         <form v-else class="mt-3 space-y-4" @submit.prevent="form.post(`/pembayaran/${applicant.registration_number}/duitku`)">
+          <div v-if="form.errors.method" role="alert" class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">{{ form.errors.method }}</div>
           <div v-if="selectedMethod" class="rounded-2xl border-2 border-emerald-700 bg-emerald-50 p-5">
             <p class="text-xs font-bold uppercase tracking-wider text-emerald-700">Metode yang dipilih</p>
             <div class="mt-3 flex items-center gap-4"><img v-if="selectedChannel?.icon_url" :src="selectedChannel.icon_url" alt="" class="h-10 w-20 object-contain" /><div><b class="block text-lg text-emerald-950">{{ selectedChannel?.name || selectedMethod }}</b><small class="text-slate-500">{{ selectedChannel?.group }}</small></div></div>
