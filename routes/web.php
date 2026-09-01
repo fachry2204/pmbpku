@@ -14,6 +14,11 @@ use App\Http\Controllers\HealthController;
 Route::get('/', function (SettingsService $s) {
     return Inertia::render('Public/Home',['content'=>['hero_title'=>$s->get('landing.hero_title','Penerimaan Mahasiswa Baru Pendidikan Kader Ulama'),'hero_description'=>$s->get('landing.hero_description','Mempersiapkan kader berilmu, berakhlak, dan siap mengabdi kepada umat.'),'requirements'=>$s->get('landing.requirements','Ijazah, identitas, rekomendasi, foto, dan dokumen PDDIKTI.'),'contact'=>$s->get('landing.contact','Hubungi panitia PMB untuk informasi lebih lanjut.'),'faq'=>$s->get('landing.faq',[])] ]);
 });
+Route::get('/syarat-dan-ketentuan', function () {
+    return Inertia::render('Public/Terms', [
+        'content' => file_get_contents(resource_path('content/terms-and-conditions.txt')),
+    ]);
+})->name('terms');
 Route::get('/health',HealthController::class)->middleware('throttle:30,1')->name('health');
 Route::get('/pendaftaran',[RegistrationController::class,'create'])->name('registration.create');
 Route::post('/pendaftaran',[RegistrationController::class,'store'])->middleware('throttle:5,1')->name('registration.store');

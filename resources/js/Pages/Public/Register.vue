@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {Head,useForm} from '@inertiajs/vue3';import {computed,ref} from 'vue';
+import {Head,Link,useForm} from '@inertiajs/vue3';import {computed,ref} from 'vue';
 const props=defineProps<{channels:any[],paymentError:string|null}>();
 const step=ref(1);
 const form=useForm({submission_uuid:crypto.randomUUID(),payment_method:'',full_name:'',birth_place:'',birth_date:'',address:'',whatsapp:'',email:'',consent:false,recommendation_letter:null as File|null,diploma:null as File|null,photo_4x6:null as File|null,identity_card:null as File|null,pddikti_screenshot:null as File|null});
@@ -36,7 +36,7 @@ const submit=()=>form.post('/pendaftaran',{forceFormData:true,preserveScroll:tru
           <div v-if="paymentError" class="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{{paymentError}}</div>
           <div v-if="channels.length" class="grid gap-4 sm:grid-cols-2"><label v-for="channel in channels" :key="channel.code" class="flex cursor-pointer items-center gap-4 rounded-2xl border-2 p-5 transition" :class="form.payment_method===channel.code?'border-[#07805c] bg-emerald-50':'border-slate-100 hover:border-emerald-200'"><input v-model="form.payment_method" type="radio" :value="channel.code" required class="text-[#07805c] focus:ring-[#07805c]"/><img v-if="channel.icon_url" :src="channel.icon_url" alt="" class="h-9 w-16 object-contain"/><span><b class="block text-[#064e3b]">{{channel.name}}</b><small class="text-slate-500">{{channel.group}} · {{channel.code}}</small></span></label></div>
           <div class="mt-6 rounded-xl bg-slate-50 p-5"><div class="flex justify-between text-sm"><span>Biaya pendaftaran</span><b>Dihitung oleh sistem</b></div><div class="mt-3 flex justify-between border-t pt-3 text-sm"><span>Biaya layanan</span><b>Sesuai metode pembayaran</b></div><p class="mt-4 text-xs leading-5 text-slate-500">Setelah data tersimpan, Anda akan masuk ke halaman konfirmasi pembayaran.</p></div>
-          <label class="mt-5 flex gap-3 rounded-xl border border-emerald-100 bg-emerald-50 p-4"><input v-model="form.consent" type="checkbox" required class="mt-1 text-[#07805c] focus:ring-[#07805c]"/><span class="text-sm leading-6">Saya menyatakan data dan dokumen benar serta menyetujui kebijakan privasi dan pemrosesan data pribadi.</span></label>
+          <label class="mt-5 flex gap-3 rounded-xl border border-emerald-100 bg-emerald-50 p-4"><input v-model="form.consent" type="checkbox" required class="mt-1 text-[#07805c] focus:ring-[#07805c]"/><span class="text-sm leading-6">Saya menyatakan data dan dokumen benar serta telah membaca dan menyetujui <Link href="/syarat-dan-ketentuan" target="_blank" class="font-bold text-[#067052] underline decoration-emerald-300 underline-offset-2">Syarat dan Ketentuan</Link> PMB.</span></label>
         </section>
 
         <div v-if="form.progress" class="mt-7 h-2 overflow-hidden rounded-full bg-slate-100"><div class="h-full bg-[#07805c]" :style="{width:form.progress.percentage+'%'}"></div></div>
