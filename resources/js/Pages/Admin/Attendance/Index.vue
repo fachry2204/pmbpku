@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Html5Qrcode } from 'html5-qrcode';
 
 const props = defineProps<{ identifier: string; notFound: boolean; applicant: any | null }>();
@@ -11,6 +11,18 @@ const scanner = ref<Html5Qrcode | null>(null);
 const showApplicant = ref(!!props.applicant);
 const notFoundModal = ref(props.notFound);
 const form = useForm({ applicant_id: props.applicant?.id || '', registration_number: props.applicant?.registration_number || '' });
+let previousViewport = '';
+onMounted(() => {
+  const viewport = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+  if (!viewport) return;
+  previousViewport = viewport.content;
+  viewport.content = 'width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover';
+});
+onBeforeUnmount(() => {
+  const viewport = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+  if (viewport && previousViewport) viewport.content = previousViewport;
+  void stopScan();
+});
 const isAttended = computed(() => props.applicant?.selection_status === 'attending_test' || props.applicant?.schedule?.attendance_status === 'attended');
 const canAttend = computed(() => props.applicant?.selection_status === 'scheduled' && !!props.applicant?.schedule);
 watch(() => props.applicant, (applicant) => { showApplicant.value = !!applicant; });
@@ -45,12 +57,11 @@ const scan = async () => {
 </script>
 
 <template>
-  <Head title="Absensi Peserta Seleksi" />
-  <main class="min-h-screen px-4 py-8 sm:px-6 lg:px-8">
+  <Head title="Absensi Peserta Seleksi"><meta head-key="viewport" name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" /></Head>
+  <main class="attendance-page min-h-[100svh] px-4 pb-32 pt-8 sm:px-6 lg:px-8">
     <section class="mx-auto max-w-3xl">
-      <header class="text-center text-white"><p class="text-xs font-black uppercase tracking-[.2em] text-amber-300">Petugas Seleksi</p><h1 class="mt-2 text-3xl font-black">Absensi Peserta</h1><p class="mt-2 text-sm text-emerald-50/80">Scan QR pada kartu peserta atau cari menggunakan nomor pendaftaran, nomor telepon, maupun email.</p></header>
-
-      <form class="mt-7 space-y-3 rounded-2xl border border-white/20 bg-white p-3 shadow-2xl" @submit.prevent="find"><input v-model="search" autofocus required class="w-full rounded-xl border-slate-300 px-4 py-3 text-sm focus:border-emerald-600 focus:ring-emerald-600" placeholder="Nomor pendaftaran / telepon / email"><div class="grid gap-2 sm:grid-cols-2"><button type="button" class="w-full rounded-xl border border-emerald-700 px-4 py-3 text-sm font-black text-emerald-800 hover:bg-emerald-50" @click="scan">▣ Scan QR</button><button class="w-full rounded-xl bg-emerald-800 px-5 py-3 text-sm font-black text-white hover:bg-emerald-700">Cari Peserta</button></div></form>
+      <header class="text-center text-white"><p class="text-xs font-black uppercase tracking-[.2em] text-amber-300">Petugas Seleksi</p><h1 class="mt-2 text-3xl font-black">Absensi Peserta</h1><p class="mt-2 text-sm text-emerald-50/80">Scan QR pada kartu seleksi untuk menampilkan dan mencatat kehadiran peserta.</p></header>
+      <div v-if="!applicant || !showApplicant" class="mx-auto mt-8 max-w-md rounded-3xl border border-white/20 bg-white/10 p-6 text-center text-white shadow-2xl backdrop-blur-sm"><span class="mx-auto grid h-16 w-16 place-items-center rounded-full border border-amber-300/50 bg-amber-300/15 text-3xl">▣</span><h2 class="mt-4 text-lg font-black">Siap Memindai Peserta</h2><p class="mt-2 text-sm leading-6 text-emerald-50/75">Tekan tombol Scan Peserta di bawah, lalu arahkan kamera ke QR pada kartu seleksi.</p></div>
       <Teleport to="body"><div v-if="scanning" class="fixed inset-0 z-[100] flex flex-col bg-black"><div class="flex items-center justify-between bg-black/90 px-4 py-3 text-white"><div><b class="block">Scan QR Peserta</b><span class="text-xs text-white/70">Arahkan kamera ke QR pada kartu peserta</span></div><button type="button" class="rounded-xl border border-white/40 px-4 py-2 text-sm font-bold" @click="stopScan">Tutup</button></div><div class="grid min-h-0 flex-1 place-items-center overflow-hidden"><div id="attendance-qr-reader" class="w-full max-w-2xl overflow-hidden bg-black"></div></div></div></Teleport>
 
       <div v-if="page.props.flash?.success" class="mt-4 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-sm font-bold text-emerald-800">✓ {{ page.props.flash.success }}</div>
@@ -67,9 +78,11 @@ const scan = async () => {
         </div>
       </article>
     </section>
+    <div class="fixed inset-x-0 bottom-0 z-40 border-t border-white/70 bg-white/95 px-4 pt-3 shadow-[0_-12px_35px_rgba(2,44,34,.28)] backdrop-blur-xl" style="padding-bottom:calc(env(safe-area-inset-bottom) + .75rem)"><button type="button" class="mx-auto flex w-full max-w-xs items-center justify-center gap-3 rounded-2xl bg-emerald-800 px-6 py-4 font-black text-white shadow-lg shadow-emerald-950/25 transition active:scale-[.98]" @click="scan"><span class="text-xl">▣</span>Scan Peserta</button></div>
   </main>
 </template>
 
 <style scoped>
+.attendance-page{touch-action:pan-x pan-y;overscroll-behavior:none}
 .data-label{display:block;margin-bottom:.35rem;color:#64748b;font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.data-label+b{display:block;color:#064e3b;font-size:.8rem;line-height:1.35rem}
 </style>

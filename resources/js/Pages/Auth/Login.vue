@@ -12,7 +12,7 @@ const submit=()=>form.post(route('login'),{onFinish:()=>form.reset('password')})
       <Link href="/" class="mb-7 inline-flex items-center gap-3 font-semibold text-white/90 transition hover:text-white"><span class="text-2xl">←</span><span>Kembali ke Halaman Utama</span></Link>
 
       <section class="login-card grid overflow-hidden rounded-[18px] bg-white shadow-2xl shadow-black/25 md:h-[calc(100vh-48px)] md:max-h-[560px] lg:grid-cols-[.88fr_1.12fr]">
-        <aside class="flex flex-col bg-gradient-to-br from-[#f2faf6] to-[#f7f9fb] p-6 md:p-7 lg:p-8">
+        <aside class="hidden flex-col bg-gradient-to-br from-[#f2faf6] to-[#f7f9fb] p-6 md:p-7 lg:flex lg:p-8">
           <div class="flex items-center"><img src="/images/logo-pku-mui-jakarta.png" alt="Pendidikan Kader Ulama MUI Provinsi DKI Jakarta" class="h-12 max-w-full object-contain object-left" /></div>
 
           <div class="mt-12"><h1 class="max-w-md text-3xl font-extrabold leading-tight text-[#102b24] md:text-4xl">Sistem Informasi<br/>PMB Pendidikan<br/>Kader Ulama</h1><p class="mt-5 max-w-md text-base leading-8 text-slate-600">Portal terintegrasi untuk pengelolaan pendaftar, dokumen, pembayaran, nilai calon, dan hasil seleksi.</p></div>
@@ -74,5 +74,12 @@ const submit=()=>form.post(route('login'),{onFinish:()=>form.reset('password')})
 .login-card input[type=text],.login-card input[type=password]{padding-top:.55rem!important;padding-bottom:.55rem!important;padding-left:2.25rem!important;font-size:.72rem!important;border-radius:.65rem!important}
 .login-card form button{margin-top:.85rem!important;padding:.6rem!important;font-size:.75rem!important;border-radius:.65rem!important}
 .login-card form+p{margin-top:.9rem!important;padding-top:.65rem!important;font-size:.6rem!important}
+@media(max-width:1023px){
+  .login-pattern>div{display:flex;min-height:calc(100svh - 1.5rem);flex-direction:column}
+  .login-pattern>div>a{margin-bottom:0!important}
+  .login-card{background:transparent!important;box-shadow:none!important}
+  .login-card{display:flex!important;flex:1;align-items:center;justify-content:center}
+  .login-card>div{width:100%;border:1px solid rgba(255,255,255,.75);border-radius:1.5rem;background:rgba(255,255,255,.97);padding:1.5rem!important;box-shadow:0 24px 60px rgba(0,24,18,.3)}
+}
 </style>
 
