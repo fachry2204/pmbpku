@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import { Html5Qrcode } from 'html5-qrcode';
 
 const props = defineProps<{ identifier: string; notFound: boolean; applicant: any | null }>();
@@ -15,11 +15,23 @@ const find = () => router.get('/absen', { identifier: search.value }, { preserve
 const attend = () => { form.applicant_id = props.applicant.id; form.registration_number = props.applicant.registration_number; form.post('/absen', { preserveScroll: true }); };
 const stopScan = async () => { if (scanner.value) { await scanner.value.stop().catch(() => undefined); scanner.value.clear(); scanner.value = null; } scanning.value = false; };
 const scan = async () => {
-  scanning.value = true;
+  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+    window.alert('Kamera hanya dapat digunakan melalui koneksi HTTPS dan browser yang mendukung akses kamera.');
+    return;
+  }
   try {
+    const permissionStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+    const deviceId = permissionStream.getVideoTracks()[0]?.getSettings().deviceId;
+    permissionStream.getTracks().forEach((track) => track.stop());
+    scanning.value = true;
+    await nextTick();
     scanner.value = new Html5Qrcode('attendance-qr-reader');
-    await scanner.value.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 220, height: 220 } }, async (value) => { try { const url = new URL(value); search.value = url.searchParams.get('identifier') || value; } catch { search.value = value; } await stopScan(); find(); }, () => undefined);
-  } catch { stopScan(); window.alert('Kamera tidak dapat diakses. Pastikan izin kamera diberikan.'); }
+    await scanner.value.start(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'environment' }, { fps: 10, qrbox: { width: 220, height: 220 } }, async (value) => { try { const url = new URL(value); search.value = url.searchParams.get('identifier') || value; } catch { search.value = value; } await stopScan(); find(); }, () => undefined);
+  } catch (error) {
+    await stopScan();
+    const denied = error instanceof DOMException && ['NotAllowedError', 'PermissionDeniedError'].includes(error.name);
+    window.alert(denied ? 'Izin kamera ditolak. Buka pengaturan situs di browser, izinkan Kamera, lalu coba kembali.' : 'Kamera tidak dapat dibuka. Pastikan kamera tidak sedang digunakan aplikasi lain.');
+  }
 };
 </script>
 
@@ -29,7 +41,7 @@ const scan = async () => {
     <section class="mx-auto max-w-3xl">
       <header class="text-center text-white"><p class="text-xs font-black uppercase tracking-[.2em] text-amber-300">Petugas Seleksi</p><h1 class="mt-2 text-3xl font-black">Absensi Peserta</h1><p class="mt-2 text-sm text-emerald-50/80">Scan QR pada kartu peserta atau cari menggunakan nomor pendaftaran, nomor telepon, maupun email.</p></header>
 
-      <form class="mt-7 flex flex-wrap gap-2 rounded-2xl border border-white/20 bg-white p-3 shadow-2xl" @submit.prevent="find"><input v-model="search" autofocus required class="min-w-0 flex-1 rounded-xl border-slate-300 px-4 py-3 text-sm focus:border-emerald-600 focus:ring-emerald-600" placeholder="Nomor pendaftaran / telepon / email"><button type="button" class="rounded-xl border border-emerald-700 px-4 py-3 text-sm font-black text-emerald-800 hover:bg-emerald-50" @click="scan">▣ Scan QR</button><button class="rounded-xl bg-emerald-800 px-5 py-3 text-sm font-black text-white hover:bg-emerald-700">Cari Peserta</button></form>
+      <form class="mt-7 space-y-3 rounded-2xl border border-white/20 bg-white p-3 shadow-2xl" @submit.prevent="find"><input v-model="search" autofocus required class="w-full rounded-xl border-slate-300 px-4 py-3 text-sm focus:border-emerald-600 focus:ring-emerald-600" placeholder="Nomor pendaftaran / telepon / email"><div class="grid gap-2 sm:grid-cols-2"><button type="button" class="w-full rounded-xl border border-emerald-700 px-4 py-3 text-sm font-black text-emerald-800 hover:bg-emerald-50" @click="scan">▣ Scan QR</button><button class="w-full rounded-xl bg-emerald-800 px-5 py-3 text-sm font-black text-white hover:bg-emerald-700">Cari Peserta</button></div></form>
       <div v-if="scanning" class="mt-4 rounded-2xl bg-slate-950 p-4 text-center"><div id="attendance-qr-reader" class="mx-auto max-w-sm overflow-hidden rounded-xl"></div><button class="mt-3 rounded-lg bg-white px-4 py-2 text-sm font-bold text-slate-800" @click="stopScan">Tutup Kamera</button></div>
 
       <div v-if="page.props.flash?.success" class="mt-4 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-sm font-bold text-emerald-800">✓ {{ page.props.flash.success }}</div>
