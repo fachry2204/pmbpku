@@ -1,0 +1,80 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Setting;
+use App\Models\User;
+use App\Services\PaymentGatewayService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
+use Inertia\Testing\AssertableInertia as Assert;
+use Mockery\MockInterface;
+use Tests\TestCase;
+
+class SettingsRegistrationDisplayTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_super_admin_can_open_settings_with_both_gateway_urls(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin', 'is_active' => true]);
+        $this->actingAs($admin)->get('/admin/settings')->assertOk()->assertInertia(fn (Assert $page) => $page->component('Admin/Settings/Index')->where('callbackUrl', route('webhooks.duitku'))->where('tripayCallbackUrl', url('/webhooks/tripay')));
+    }
+
+    public function test_settings_page_survives_an_unreadable_encrypted_credential(): void
+    {
+        Setting::create(['group' => 'tripay', 'key' => 'tripay.private_key', 'value' => 'broken-ciphertext', 'type' => 'string', 'is_encrypted' => true]);
+        $admin = User::factory()->create(['role' => 'super_admin', 'is_active' => true]);
+        $this->actingAs($admin)->get('/admin/settings')->assertOk()->assertInertia(fn (Assert $page) => $page->where('unreadableSettings.0', 'tripay.private_key'));
+    }
+
+    public function test_registration_page_receives_the_configured_fee(): void
+    {
+        Setting::create(['group' => 'pmb', 'key' => 'pmb.registration_fee', 'value' => '375000', 'type' => 'integer', 'is_encrypted' => false]);
+        $this->mock(PaymentGatewayService::class, function (MockInterface $mock) {
+            $mock->shouldReceive('provider')->andReturn('duitku');
+            $mock->shouldReceive('mode')->andReturn('sandbox');
+            $mock->shouldReceive('channels')->once()->with(375000)->andReturn([]);
+        });
+        $this->get('/pendaftaran')->assertOk()->assertInertia(fn (Assert $page) => $page->component('Public/Register')->where('registrationFee', 375000));
+    }
+
+    public function test_registration_year_can_be_saved_from_settings(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin', 'is_active' => true]);
+        $this->actingAs($admin)->put('/admin/settings', ['pmb_registration_fee' => 250000, 'pmb_registration_year' => 2030, 'registration_document_upload_disabled' => false, 'payment_provider' => 'duitku', 'notifications_whatsapp_enabled' => true, 'notifications_email_enabled' => true])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('settings', ['key' => 'pmb.registration_year', 'value' => '2030']);
+        $this->get('/')->assertOk()->assertInertia(fn (Assert $page) => $page->where('registrationYear', 2030));
+    }
+
+    public function test_selection_location_can_be_saved_from_registration_settings(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin', 'is_active' => true]);
+        $this->actingAs($admin)->put('/admin/settings', ['pmb_registration_fee' => 250000, 'pmb_selection_location' => 'Aula Utama MUI Provinsi DKI Jakarta', 'registration_document_upload_disabled' => false, 'payment_provider' => 'duitku', 'notifications_whatsapp_enabled' => true, 'notifications_email_enabled' => true])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('settings', ['key' => 'pmb.selection_location', 'value' => 'Aula Utama MUI Provinsi DKI Jakarta']);
+    }
+
+    public function test_empty_smtp_port_does_not_prevent_payment_settings_from_being_saved(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin', 'is_active' => true]);
+        $this->actingAs($admin)->put('/admin/settings', ['pmb_registration_fee' => 375000, 'registration_document_upload_disabled' => false, 'payment_provider' => 'duitku', 'notifications_whatsapp_enabled' => true, 'notifications_email_enabled' => true, 'duitku_mode' => 'sandbox', 'duitku_merchant_code' => 'D12345', 'duitku_api_key' => 'secret-key', 'mail_port' => 0, 'mail_from_name' => 'Panitia PMB PKU'])->assertSessionHasNoErrors()->assertSessionHas('success');
+        $this->assertDatabaseHas('settings', ['key' => 'pmb.registration_fee', 'value' => '375000']);
+        $this->assertDatabaseHas('settings', ['key' => 'duitku.merchant_code', 'value' => 'D12345']);
+        $this->assertDatabaseHas('settings', ['key' => 'mail.from_name', 'value' => 'Panitia PMB PKU']);
+    }
+
+    public function test_super_admin_can_send_a_test_email(): void
+    {
+        Mail::fake();
+        $admin = User::factory()->create(['role' => 'super_admin', 'is_active' => true]);
+        $this->actingAs($admin)->post('/admin/settings/test-email', ['test_email_recipient' => 'panitia@example.test'])->assertSessionHasNoErrors()->assertSessionHas('success');
+    }
+
+    public function test_score_labels_can_be_saved_and_are_used_on_the_score_page(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin', 'is_active' => true]);
+        $this->actingAs($admin)->put('/admin/settings', ['pmb_registration_fee' => 250000, 'registration_document_upload_disabled' => false, 'scores_label_1' => 'Tes Tulis', 'scores_label_2' => 'Bahasa Arab', 'scores_label_3' => 'Wawancara', 'scores_label_4' => 'Baca Kitab', 'payment_provider' => 'duitku', 'notifications_whatsapp_enabled' => true, 'notifications_email_enabled' => true])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('settings', ['key' => 'scores.label_1', 'value' => 'Tes Tulis']);
+        $this->actingAs($admin)->get('/admin/applicant-scores')->assertOk()->assertInertia(fn (Assert $page) => $page->where('scoreLabels', ['Tes Tulis', 'Bahasa Arab', 'Wawancara', 'Baca Kitab']));
+    }
+}

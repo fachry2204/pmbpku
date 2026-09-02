@@ -16,7 +16,7 @@ const lookup = useForm({ identifier: props.initialIdentifier || '' });
       <form class="mt-7 space-y-4" @submit.prevent="lookup.post('/cek-status')">
         <label class="block">
           <span class="text-sm font-semibold">Nomor pendaftaran, email, atau nomor HP</span>
-          <input v-model="lookup.identifier" type="text" required autofocus autocomplete="off" placeholder="PKU-2026-000001, email, atau nomor HP" class="mt-2 w-full rounded-xl border-slate-300" />
+          <input v-model="lookup.identifier" type="text" required autofocus autocomplete="off" placeholder="" class="mt-2 w-full rounded-xl border-slate-300" />
           <small v-if="lookup.errors.identifier" class="mt-2 block text-sm text-red-700">{{ lookup.errors.identifier }}</small>
         </label>
         <button :disabled="lookup.processing" class="w-full rounded-xl bg-emerald-800 py-3 font-bold text-white disabled:opacity-50">

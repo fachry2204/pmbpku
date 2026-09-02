@@ -29,6 +29,7 @@ const sections = computed<Section[]>(() => [
   { tab: 'registration', title: 'Pendaftaran', description: 'Atur biaya dan langkah upload dokumen pada formulir pendaftaran.', accent: 'bg-amber-50 text-amber-700', icon: 'Rp', fields: [
     { key: 'pmb_registration_year', label: 'Tahun Pendaftaran', type: 'year', hint: 'Tahun ini digunakan pada periode PMB dan nomor pendaftaran baru.' },
     { key: 'pmb_registration_fee', label: 'Harga Pendaftaran (Rp)', type: 'number', hint: 'Nominal biaya pendaftaran sebelum biaya layanan.' },
+    { key: 'pmb_selection_location', label: 'Lokasi Seleksi', type: 'text', hint: 'Lokasi ini otomatis disimpan ke jadwal seleksi baru dan ditampilkan pada status serta kartu peserta.' },
     { key: 'registration_document_upload_disabled', label: 'Nonaktifkan Upload Dokumen', type: 'toggle', hint: 'Jika aktif, langkah upload dokumen disembunyikan dan dokumen tidak wajib. Jika nonaktif, semua dokumen wajib diunggah.' },
   ]},
   { tab: 'subjects', title: 'Mapel / Komponen Nilai', description: 'Ubah nama empat kolom nilai tanpa mengubah atau menghapus nilai pendaftar yang sudah tersimpan.', accent: 'bg-cyan-50 text-cyan-700', icon: 'N', fields: [

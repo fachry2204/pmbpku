@@ -19,7 +19,7 @@ final class NotificationTemplateService
         'document_incomplete' => 'Dokumen pendaftaran {registration_number} memerlukan perbaikan. Silakan cek status pendaftaran untuk melihat catatan panitia dan unggah dokumen yang sesuai.',
         'document_complete' => 'Alhamdulillah, seluruh dokumen pendaftaran {registration_number} telah dinyatakan lengkap.',
         'selection_not_scheduled' => 'Status seleksi {registration_number} diperbarui: belum dijadwalkan. Pantau informasi berikutnya melalui halaman cek status.',
-        'selection_scheduled' => "Pendaftaran {registration_number} telah masuk jadwal seleksi.\n\nJadwal Seleksi:\nTanggal: {selection_date}\nWaktu: {selection_time} WIB",
+        'selection_scheduled' => "Pendaftaran {registration_number} telah masuk jadwal seleksi.\n\nJadwal Seleksi:\nTanggal: {selection_date}\nWaktu: {selection_time} WIB\nLokasi: {selection_location}\n\nSilakan download dan bawa Kartu Peserta Seleksi dari halaman cek status.",
         'selection_attending_test' => 'Status seleksi {registration_number} diperbarui: sedang mengikuti proses seleksi.',
         'selection_passed' => 'Selamat {full_name}! Anda dinyatakan DITERIMA pada PMB Pendidikan Kader Ulama. Nomor pendaftaran: {registration_number}. Silakan ikuti arahan lanjutan dari panitia.',
         'selection_not_passed' => 'Terima kasih {full_name} telah mengikuti seluruh proses. Berdasarkan hasil seleksi, pendaftaran {registration_number} belum dinyatakan diterima.',
@@ -41,12 +41,13 @@ final class NotificationTemplateService
             'notifications.'.$event,
             self::DEFAULTS[$event] ?? $fallback ?? "Assalamu'alaikum {full_name},\n\nTerdapat pembaruan status PMB untuk {registration_number}. Silakan cek status pendaftaran Anda."
         );
-        $schedule = $event === 'selection_scheduled'
-            ? $applicant->testSessions()->latest('starts_at')->first()?->starts_at
+        $session = $event === 'selection_scheduled'
+            ? $applicant->testSessions()->latest('starts_at')->first()
             : null;
-        $date = $schedule?->locale('id')->translatedFormat('l, d F Y') ?? '-';
-        $time = $schedule?->format('H:i') ?? '-';
-        $containsScheduleVariables = str_contains($template, '{selection_date}') || str_contains($template, '{selection_time}');
+        $date = $session?->starts_at?->locale('id')->translatedFormat('l, d F Y') ?? '-';
+        $time = $session?->starts_at?->format('H:i') ?? '-';
+        $location = $session?->location ?: 'Lokasi akan diinformasikan oleh panitia';
+        $containsScheduleVariables = str_contains($template, '{selection_date}') || str_contains($template, '{selection_time}') || str_contains($template, '{selection_location}');
 
         $message = strtr($template, [
             '{registration_number}' => $applicant->registration_number,
@@ -59,10 +60,11 @@ final class NotificationTemplateService
             '{selection_status_label}' => $this->label($applicant->selection_status->value),
             '{selection_date}' => $date,
             '{selection_time}' => $time,
+            '{selection_location}' => $location,
         ]);
 
         if ($event === 'selection_scheduled' && ! $containsScheduleVariables) {
-            $message .= "\n\nJadwal Seleksi:\nTanggal: {$date}\nWaktu: {$time} WIB";
+            $message .= "\n\nJadwal Seleksi:\nTanggal: {$date}\nWaktu: {$time} WIB\nLokasi: {$location}";
         }
 
         return $message;

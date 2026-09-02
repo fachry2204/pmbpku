@@ -10,6 +10,7 @@ use App\Models\AdmissionPeriod;
 use App\Models\Applicant;
 use App\Models\TestSession;
 use App\Services\RcloneStorageService;
+use App\Services\SettingsService;
 use App\Support\IndonesianPhone;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -49,7 +50,18 @@ class ApplicantController extends Controller
 
     public function show(Applicant $applicant): Response
     {
-        return Inertia::render('Admin/Applicants/Show', ['applicant' => $applicant->load('documents', 'payments')]);
+        $applicant->load(['documents', 'payments', 'testSessions' => fn ($query) => $query->latest('starts_at')]);
+        $session = $applicant->testSessions->first();
+        $applicant->setAttribute('selection_schedule', $session ? [
+            'date' => $session->starts_at->locale('id')->translatedFormat('d F Y'),
+            'time' => $session->starts_at->format('H:i').' WIB',
+            'location' => $session->location ?: 'Lokasi akan diinformasikan oleh panitia',
+        ] : null);
+        $applicant->setAttribute('selection_card_url', $this->canDownloadSelectionCard($applicant, $session)
+            ? route('admin.applicants.selection-card', $applicant)
+            : null);
+
+        return Inertia::render('Admin/Applicants/Show', ['applicant' => $applicant]);
     }
 
     public function edit(Applicant $applicant): Response
@@ -117,7 +129,7 @@ class ApplicantController extends Controller
         return back()->with('success', 'Dokumen berhasil diunggah dan menunggu pemeriksaan.');
     }
 
-    public function updateStatus(Request $request, Applicant $applicant): RedirectResponse
+    public function updateStatus(Request $request, Applicant $applicant, SettingsService $settings): RedirectResponse
     {
         $data = $request->validate([
             'dimension' => ['required', Rule::in(['payment', 'document', 'selection'])],
@@ -149,7 +161,8 @@ class ApplicantController extends Controller
         }
 
         $attribute = $data['dimension'].'_status';
-        DB::transaction(function () use ($request, $applicant, $data, $attribute): void {
+        $selectionLocation = trim((string) $settings->get('pmb.selection_location', ''));
+        DB::transaction(function () use ($request, $applicant, $data, $attribute, $selectionLocation): void {
             $locked = Applicant::whereKey($applicant->id)->lockForUpdate()->firstOrFail();
             $before = $locked->{$attribute}->value;
             if ($before === $data['status']) {
@@ -175,6 +188,7 @@ class ApplicantController extends Controller
                     'admission_period_id' => $locked->admission_period_id,
                     'name' => 'Seleksi '.$locked->registration_number,
                     'starts_at' => $startsAt,
+                    'location' => $selectionLocation ?: null,
                 ]);
                 $session->applicants()->attach($locked->id, [
                     'attendance_status' => 'assigned',
@@ -211,7 +225,7 @@ class ApplicantController extends Controller
         return back()->with('success', 'Status '.$data['dimension'].' berhasil diperbarui.');
     }
 
-    public function bulkSchedule(Request $request): RedirectResponse
+    public function bulkSchedule(Request $request, SettingsService $settings): RedirectResponse
     {
         $data = $request->validate([
             'applicant_ids' => ['required', 'array', 'min:1', 'max:500'],
@@ -224,8 +238,9 @@ class ApplicantController extends Controller
             $data['selection_date'].' '.$data['selection_time'],
             config('app.timezone')
         );
+        $selectionLocation = trim((string) $settings->get('pmb.selection_location', ''));
 
-        DB::transaction(function () use ($request, $data, $startsAt): void {
+        DB::transaction(function () use ($request, $data, $startsAt, $selectionLocation): void {
             $applicants = Applicant::whereIn('id', $data['applicant_ids'])->lockForUpdate()->get();
             $invalid = $applicants->reject(fn (Applicant $applicant) => in_array(
                 $applicant->selection_status,
@@ -243,6 +258,7 @@ class ApplicantController extends Controller
                     'admission_period_id' => $periodId,
                     'name' => 'Seleksi '.$startsAt->format('d/m/Y H:i'),
                     'starts_at' => $startsAt,
+                    'location' => $selectionLocation ?: null,
                 ]);
                 $session->applicants()->attach($group->mapWithKeys(fn (Applicant $applicant) => [
                     $applicant->id => [
@@ -341,5 +357,13 @@ class ApplicantController extends Controller
         });
 
         return redirect()->route('admin.applicants.index')->with('success', 'Pendaftar dan seluruh dokumennya telah dihapus permanen.');
+    }
+
+    private function canDownloadSelectionCard(Applicant $applicant, ?TestSession $session): bool
+    {
+        return $session !== null && in_array($applicant->selection_status, [
+            SelectionStatus::Scheduled,
+            SelectionStatus::AttendingTest,
+        ], true);
     }
 }

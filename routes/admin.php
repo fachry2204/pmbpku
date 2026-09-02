@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\PrivateDocumentController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\SelectionCardController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')->middleware(['auth', 'active.admin:admin_pmb,finance,reviewer,viewer'])->group(function () {
@@ -20,6 +21,7 @@ Route::prefix('admin')->middleware(['auth', 'active.admin:admin_pmb,finance,revi
     Route::get('/applicants', [ApplicantController::class, 'index'])->name('admin.applicants.index');
     Route::get('/applicants/{applicant}', [ApplicantController::class, 'show'])->name('admin.applicants.show');
     Route::get('/applicants/{applicant}/download', [ApplicantController::class, 'download'])->name('admin.applicants.download');
+    Route::get('/applicants/{applicant}/selection-card', [SelectionCardController::class, 'adminDownload'])->name('admin.applicants.selection-card');
     Route::patch('/applicants/{applicant}/status', [ApplicantController::class, 'updateStatus'])->name('admin.applicants.status');
     Route::get('/documents/{document}/download', PrivateDocumentController::class)->name('admin.documents.download')->middleware('active.admin:admin_pmb,reviewer');
     Route::patch('/applicants/{applicant}/documents/{document}', [DocumentReviewController::class, 'update'])->name('admin.documents.review')->middleware('active.admin:admin_pmb,reviewer');

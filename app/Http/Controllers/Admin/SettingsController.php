@@ -18,6 +18,7 @@ class SettingsController extends Controller
     private const KEYS = [
         'pmb.registration_fee' => ['integer', false],
         'pmb.registration_year' => ['integer', false],
+        'pmb.selection_location' => ['string', false],
         'registration.document_upload_disabled' => ['boolean', false],
         'scores.label_1' => ['string', false],
         'scores.label_2' => ['string', false],
@@ -61,6 +62,7 @@ class SettingsController extends Controller
             $default = match ($key) {
                 'pmb.registration_fee' => 250000,
                 'pmb.registration_year' => now()->year,
+                'pmb.selection_location' => '',
                 'registration.document_upload_disabled' => false,
                 'scores.label_1' => 'Tes Tulis Wawasan Keislaman',
                 'scores.label_2' => 'Membaca Al Qur’an',
@@ -110,6 +112,7 @@ class SettingsController extends Controller
         $data = $request->validate([
             'pmb_registration_fee' => ['required', 'integer', 'min:1000', 'max:100000000'],
             'pmb_registration_year' => ['sometimes', 'required', 'integer', 'min:2020', 'max:2100'],
+            'pmb_selection_location' => ['sometimes', 'nullable', 'string', 'max:500'],
             'registration_document_upload_disabled' => ['required', 'boolean'],
             'scores_label_1' => ['sometimes', 'required', 'string', 'max:80'],
             'scores_label_2' => ['sometimes', 'required', 'string', 'max:80'],

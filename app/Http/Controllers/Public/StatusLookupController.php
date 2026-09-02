@@ -80,7 +80,9 @@ class StatusLookupController
         $applicant = Applicant::with([
             'documents:id,applicant_id,type,original_name,verification_status,review_note,created_at',
             'payments:id,applicant_id,status,checkout_url,base_amount,fee_customer,total_amount,expires_at,created_at',
+            'testSessions' => fn ($query) => $query->latest('starts_at'),
         ])->findOrFail($id);
+        $session = $applicant->testSessions->first();
 
         return Inertia::render('Public/StatusDetail', ['applicant' => [
             'id' => $applicant->id,
@@ -97,6 +99,17 @@ class StatusLookupController
             'payment_status' => $applicant->payment_status,
             'document_status' => $applicant->document_status,
             'selection_status' => $applicant->selection_status,
+            'selection_schedule' => $session ? [
+                'date' => $session->starts_at->locale('id')->translatedFormat('d F Y'),
+                'time' => $session->starts_at->format('H:i').' WIB',
+                'location' => $session->location ?: 'Lokasi akan diinformasikan oleh panitia',
+            ] : null,
+            'selection_card_url' => $session && in_array($applicant->selection_status->value, ['scheduled', 'attending_test'], true)
+                ? route('status.selection-card')
+                : null,
+            'registration_proof_url' => $applicant->payment_status->value === 'paid'
+                ? route('status.registration-proof')
+                : null,
             'documents' => $applicant->documents,
             'payments' => $applicant->payments,
             'payment_url' => route('payment.show', $applicant->registration_number),

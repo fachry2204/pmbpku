@@ -145,6 +145,7 @@ class ApplicantManagementTest extends TestCase
     {
         Queue::fake();
         $applicant = $this->applicant();
+        app(SettingsService::class)->put('pmb', 'pmb.selection_location', 'Aula Utama MUI DKI Jakarta');
 
         $this->actingAs($this->admin())->patch("/admin/applicants/{$applicant->id}/status", [
             'dimension' => 'selection',
@@ -157,10 +158,89 @@ class ApplicantManagementTest extends TestCase
         $this->assertDatabaseHas('test_sessions', [
             'admission_period_id' => $applicant->admission_period_id,
             'name' => 'Seleksi '.$applicant->registration_number,
+            'location' => 'Aula Utama MUI DKI Jakarta',
         ]);
         $this->assertDatabaseHas('applicant_test_sessions', [
             'applicant_id' => $applicant->id,
             'attendance_status' => 'assigned',
+        ]);
+    }
+
+    public function test_scheduled_applicant_can_download_selection_card_pdf(): void
+    {
+        Queue::fake();
+        $applicant = $this->applicant();
+        $session = $applicant->testSessions()->create([
+            'admission_period_id' => $applicant->admission_period_id,
+            'name' => 'Seleksi Gelombang 1',
+            'starts_at' => now()->addDay()->setTime(9, 30),
+            'location' => 'Aula Utama MUI DKI Jakarta',
+        ], ['attendance_status' => 'assigned', 'assigned_at' => now()]);
+        $applicant->update(['selection_status' => 'scheduled']);
+
+        $response = $this->actingAs($this->admin())->get("/admin/applicants/{$applicant->id}/selection-card");
+
+        $response->assertOk()->assertHeader('content-type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $response->getContent());
+    }
+
+    public function test_paid_applicant_can_download_registration_proof_pdf(): void
+    {
+        $applicant = $this->applicant();
+        $applicant->update(['payment_status' => 'paid']);
+
+        $response = $this->withSession(['status_applicant_id' => $applicant->id])
+            ->get('/cek-status/bukti-registrasi');
+
+        $response->assertOk()->assertHeader('content-type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $response->getContent());
+    }
+
+    public function test_attendance_page_requires_an_authorized_officer(): void
+    {
+        $this->get('/absen')->assertRedirect('/login');
+    }
+
+    public function test_officer_can_find_scheduled_applicant_and_confirm_attendance(): void
+    {
+        Queue::fake();
+        $applicant = $this->applicant();
+        $session = $applicant->testSessions()->create([
+            'admission_period_id' => $applicant->admission_period_id,
+            'name' => 'Seleksi Gelombang 1',
+            'starts_at' => now()->addDay()->setTime(9, 30),
+            'location' => 'Aula Utama MUI DKI Jakarta',
+        ], ['attendance_status' => 'assigned', 'assigned_at' => now()]);
+        $applicant->update(['selection_status' => 'scheduled']);
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->get('/absen?identifier='.urlencode($applicant->email))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('applicant.id', $applicant->id)
+                ->where('applicant.schedule.location', 'Aula Utama MUI DKI Jakarta')
+            );
+        $this->actingAs($admin)->get('/absen?identifier='.urlencode(strtolower($applicant->registration_number)))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('applicant.id', $applicant->id));
+        $this->actingAs($admin)->get('/absen?identifier='.urlencode($applicant->whatsapp_display))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('applicant.id', $applicant->id));
+
+        $this->actingAs($admin)->post('/absen', [
+            'applicant_id' => $applicant->id,
+            'registration_number' => $applicant->registration_number,
+        ])->assertSessionHasNoErrors()->assertSessionHas('success');
+
+        $this->assertSame('attending_test', $applicant->fresh()->selection_status->value);
+        $this->assertDatabaseHas('applicant_test_sessions', [
+            'applicant_id' => $applicant->id,
+            'test_session_id' => $session->id,
+            'attendance_status' => 'attended',
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'applicant.selection.attendance_confirmed',
+            'auditable_id' => $applicant->id,
         ]);
     }
 

@@ -1,11 +1,13 @@
 <?php
 
+use App\Http\Controllers\Admin\AttendanceController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Public\DocumentRevisionController;
 use App\Http\Controllers\Public\PaymentController;
 use App\Http\Controllers\Public\RegistrationController;
 use App\Http\Controllers\Public\StatusLookupController;
+use App\Http\Controllers\SelectionCardController;
 use App\Http\Controllers\Webhooks\DuitkuWebhookController;
 use App\Http\Controllers\Webhooks\MidtransWebhookController;
 use App\Http\Controllers\Webhooks\TripayWebhookController;
@@ -32,10 +34,17 @@ Route::post('/cek-status', [StatusLookupController::class, 'lookup'])->middlewar
 Route::get('/cek-status/email/{applicant}', [StatusLookupController::class, 'emailAccess'])->middleware(['signed', 'throttle:20,1'])->name('status.email');
 Route::get('/cek-status/detail', [StatusLookupController::class, 'show'])->name('status.show');
 Route::get('/cek-status/foto', [StatusLookupController::class, 'photo'])->name('status.photo');
+Route::get('/cek-status/kartu-seleksi', [SelectionCardController::class, 'publicDownload'])->name('status.selection-card');
+Route::get('/cek-status/bukti-registrasi', [SelectionCardController::class, 'publicRegistrationDownload'])->name('status.registration-proof');
 Route::post('/cek-status/{applicant}/documents/{type}/revision', DocumentRevisionController::class)->middleware('throttle:5,10')->name('status.document-revision');
 Route::post('/webhooks/duitku', DuitkuWebhookController::class)->middleware('throttle:120,1')->name('webhooks.duitku');
 Route::post('/webhooks/tripay', TripayWebhookController::class)->middleware('throttle:120,1')->name('webhooks.tripay');
 Route::post('/webhooks/midtrans', MidtransWebhookController::class)->middleware('throttle:120,1')->name('webhooks.midtrans');
+
+Route::middleware(['auth', 'active.admin:admin_pmb'])->group(function () {
+    Route::get('/absen', [AttendanceController::class, 'index'])->name('attendance.index');
+    Route::post('/absen', [AttendanceController::class, 'store'])->middleware('throttle:60,1')->name('attendance.store');
+});
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
