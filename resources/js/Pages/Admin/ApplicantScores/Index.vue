@@ -45,7 +45,7 @@ const save = (applicant: any) => {
       <div class="mt-5 overflow-x-auto rounded-2xl bg-white shadow-sm">
         <table class="w-full min-w-[980px] text-left text-sm">
           <thead class="bg-emerald-950 text-white">
-            <tr><th class="p-4">Nama Pendaftar</th><th v-for="(label, index) in scoreLabels" :key="index" class="p-4 text-center"><span class="block">{{ label }}</span><span class="mt-1 block text-xs font-medium text-emerald-200">Bobot {{ scoreWeights[index] }}%</span></th><th class="p-4 text-center">Nilai Akhir</th><th class="p-4 text-center">Aksi</th></tr>
+            <tr><th class="w-[150px] whitespace-normal p-3 leading-tight">Nama Pendaftar</th><th v-for="(label, index) in scoreLabels" :key="index" class="w-[170px] whitespace-normal p-3 text-center leading-tight"><span class="block break-words">{{ label }}</span><span class="mt-1 block text-xs font-medium text-emerald-200">Bobot {{ scoreWeights[index] }}%</span></th><th class="w-[110px] whitespace-normal p-3 text-center leading-tight">Nilai Akhir</th><th class="w-[90px] whitespace-normal p-3 text-center leading-tight">Aksi</th></tr>
           </thead>
           <tbody>
             <tr v-for="applicant in applicants.data" :key="applicant.id" class="border-b border-slate-100 hover:bg-emerald-50/40">
