@@ -13,7 +13,7 @@ const menus = [
   { label: 'Pembayaran', href: '/admin/payments', icon: 'card' },
   { label: 'Nilai Calon', href: '/admin/applicant-scores', icon: 'file' },
   { label: 'Pengguna', href: '/admin/users', icon: 'user' },
-  { label: 'Notifikasi', href: '/admin/notification-logs', icon: 'bell' },
+  { label: 'Pesan Terkirim', href: '/admin/notification-logs', icon: 'bell' },
   { label: 'Landing Page', href: '/admin/landing', icon: 'globe' },
   { label: 'Pengaturan', href: '/admin/settings', icon: 'settings' },
   { label: 'Audit Log', href: '/admin/audit-logs', icon: 'file' },

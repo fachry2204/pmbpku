@@ -55,6 +55,7 @@ Route::prefix('admin/landing')->middleware(['auth', 'active.admin:admin_pmb'])->
 });
 Route::middleware(['auth', 'active.admin:admin_pmb,finance'])->group(function () {
     Route::get('admin/notification-logs', [NotificationLogController::class, 'index'])->name('admin.notification-logs.index');
+    Route::post('admin/notification-logs/process-pending', [NotificationLogController::class, 'processPending'])->name('admin.notification-logs.process-pending');
     Route::post('admin/notification-logs/{notificationLog}/retry', [NotificationLogController::class, 'retry'])->name('admin.notification-logs.retry');
 });
 Route::get('admin/audit-logs', AuditLogController::class)->middleware(['auth', 'active.admin:super_admin'])->name('admin.audit-logs.index');

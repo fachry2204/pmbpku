@@ -12,7 +12,7 @@ const menus = [
   ['Pembayaran','/admin/payments','M3 6h18v12H3zM3 10h18M7 15h2'],
   ['Nilai Calon','/admin/applicant-scores','M4 19V5M10 19V9M16 19V3M22 19H2'],
   ['Pengguna','/admin/users','M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10'],
-  ['Notifikasi','/admin/notification-logs','M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4'],
+  ['Pesan Terkirim','/admin/notification-logs','M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4'],
   ['Landing Page','/admin/landing','M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20M2 12h20M12 2c3 3 3 17 0 20M12 2c-3 3-3 17 0 20'],
   ['Pengaturan','/admin/settings','M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12'],
   ['Audit Log','/admin/audit-logs','M5 3h10l4 4v14H5zM14 3v5h5M8 13h8M8 17h6'],
