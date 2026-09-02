@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
-import { computed, nextTick, ref } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { Html5Qrcode } from 'html5-qrcode';
 
 const props = defineProps<{ identifier: string; notFound: boolean; applicant: any | null }>();
@@ -8,10 +8,19 @@ const page = usePage() as any;
 const search = ref(props.identifier || '');
 const scanning = ref(false);
 const scanner = ref<Html5Qrcode | null>(null);
+const showApplicant = ref(!!props.applicant);
+const notFoundModal = ref(props.notFound);
 const form = useForm({ applicant_id: props.applicant?.id || '', registration_number: props.applicant?.registration_number || '' });
 const isAttended = computed(() => props.applicant?.selection_status === 'attending_test' || props.applicant?.schedule?.attendance_status === 'attended');
 const canAttend = computed(() => props.applicant?.selection_status === 'scheduled' && !!props.applicant?.schedule);
-const find = () => router.get('/absen', { identifier: search.value }, { preserveState: false, replace: true });
+watch(() => props.applicant, (applicant) => { showApplicant.value = !!applicant; });
+watch(() => props.notFound, (notFound) => { notFoundModal.value = notFound; });
+const find = async () => {
+  showApplicant.value = false;
+  notFoundModal.value = false;
+  await stopScan();
+  router.get('/absen', { identifier: search.value }, { preserveState: false, replace: true });
+};
 const attend = () => { form.applicant_id = props.applicant.id; form.registration_number = props.applicant.registration_number; form.post('/absen', { preserveScroll: true }); };
 const stopScan = async () => { if (scanner.value) { await scanner.value.stop().catch(() => undefined); scanner.value.clear(); scanner.value = null; } scanning.value = false; };
 const scan = async () => {
@@ -26,7 +35,7 @@ const scan = async () => {
     scanning.value = true;
     await nextTick();
     scanner.value = new Html5Qrcode('attendance-qr-reader');
-    await scanner.value.start(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'environment' }, { fps: 10, qrbox: { width: 220, height: 220 } }, async (value) => { try { const url = new URL(value); search.value = url.searchParams.get('identifier') || value; } catch { search.value = value; } await stopScan(); find(); }, () => undefined);
+    await scanner.value.start(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'environment' }, { fps: 10, qrbox: { width: 220, height: 220 } }, async (value: string) => { try { const url = new URL(value); search.value = url.searchParams.get('identifier') || value; } catch { search.value = value; } await stopScan(); find(); }, () => undefined);
   } catch (error) {
     await stopScan();
     const denied = error instanceof DOMException && ['NotAllowedError', 'PermissionDeniedError'].includes(error.name);
@@ -42,13 +51,13 @@ const scan = async () => {
       <header class="text-center text-white"><p class="text-xs font-black uppercase tracking-[.2em] text-amber-300">Petugas Seleksi</p><h1 class="mt-2 text-3xl font-black">Absensi Peserta</h1><p class="mt-2 text-sm text-emerald-50/80">Scan QR pada kartu peserta atau cari menggunakan nomor pendaftaran, nomor telepon, maupun email.</p></header>
 
       <form class="mt-7 space-y-3 rounded-2xl border border-white/20 bg-white p-3 shadow-2xl" @submit.prevent="find"><input v-model="search" autofocus required class="w-full rounded-xl border-slate-300 px-4 py-3 text-sm focus:border-emerald-600 focus:ring-emerald-600" placeholder="Nomor pendaftaran / telepon / email"><div class="grid gap-2 sm:grid-cols-2"><button type="button" class="w-full rounded-xl border border-emerald-700 px-4 py-3 text-sm font-black text-emerald-800 hover:bg-emerald-50" @click="scan">▣ Scan QR</button><button class="w-full rounded-xl bg-emerald-800 px-5 py-3 text-sm font-black text-white hover:bg-emerald-700">Cari Peserta</button></div></form>
-      <div v-if="scanning" class="mt-4 rounded-2xl bg-slate-950 p-4 text-center"><div id="attendance-qr-reader" class="mx-auto max-w-sm overflow-hidden rounded-xl"></div><button class="mt-3 rounded-lg bg-white px-4 py-2 text-sm font-bold text-slate-800" @click="stopScan">Tutup Kamera</button></div>
+      <Teleport to="body"><div v-if="scanning" class="fixed inset-0 z-[100] flex flex-col bg-black"><div class="flex items-center justify-between bg-black/90 px-4 py-3 text-white"><div><b class="block">Scan QR Peserta</b><span class="text-xs text-white/70">Arahkan kamera ke QR pada kartu peserta</span></div><button type="button" class="rounded-xl border border-white/40 px-4 py-2 text-sm font-bold" @click="stopScan">Tutup</button></div><div class="grid min-h-0 flex-1 place-items-center overflow-hidden"><div id="attendance-qr-reader" class="w-full max-w-2xl overflow-hidden bg-black"></div></div></div></Teleport>
 
       <div v-if="page.props.flash?.success" class="mt-4 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-sm font-bold text-emerald-800">✓ {{ page.props.flash.success }}</div>
-      <div v-if="notFound" class="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">Data peserta tidak ditemukan. Periksa kembali data yang dimasukkan.</div>
+      <Teleport to="body"><div v-if="notFoundModal" class="fixed inset-0 z-[110] grid place-items-center bg-slate-950/75 p-5" @click.self="notFoundModal=false"><div class="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl"><span class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-rose-100 text-2xl font-black text-rose-700">!</span><h2 class="mt-4 text-xl font-black text-slate-900">Data Peserta Tidak Ditemukan</h2><p class="mt-2 text-sm leading-6 text-slate-600">Periksa kembali nomor pendaftaran, nomor telepon, atau email. Jika data tetap tidak ditemukan, hubungi Admin.</p><button type="button" class="mt-5 w-full rounded-xl bg-emerald-800 px-5 py-3 font-black text-white" @click="notFoundModal=false">Tutup</button></div></div></Teleport>
       <div v-if="form.errors.applicant_id" class="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">{{ form.errors.applicant_id }}</div>
 
-      <article v-if="applicant" class="mt-5 overflow-hidden rounded-3xl border border-white/70 bg-white shadow-2xl">
+      <article v-if="applicant && showApplicant" class="mt-5 overflow-hidden rounded-3xl border border-white/70 bg-white shadow-2xl">
         <div class="bg-gradient-to-r from-emerald-950 to-emerald-700 p-6 text-white"><div class="flex items-center gap-5"><div class="h-28 w-24 shrink-0 overflow-hidden rounded-xl border-4 border-white/80 bg-emerald-900"><img v-if="applicant.photo_url" :src="applicant.photo_url" class="h-full w-full object-cover"><span v-else class="grid h-full place-items-center text-3xl font-black">{{ applicant.full_name.charAt(0) }}</span></div><div class="min-w-0"><p class="text-xs font-bold uppercase tracking-widest text-amber-300">{{ applicant.registration_number }}</p><h2 class="mt-1 text-2xl font-black">{{ applicant.full_name }}</h2><p class="mt-2 break-all text-xs text-emerald-100">{{ applicant.email }} · {{ applicant.whatsapp }}</p></div></div></div>
         <div class="space-y-5 p-6">
           <section v-if="applicant.schedule" class="grid gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4 sm:grid-cols-3"><div><span class="data-label">Tanggal</span><b>{{ applicant.schedule.date }}</b></div><div><span class="data-label">Waktu</span><b>{{ applicant.schedule.time }}</b></div><div><span class="data-label">Lokasi</span><b>{{ applicant.schedule.location }}</b></div></section>

@@ -3,6 +3,7 @@
     "private": true,
     "type": "module",
     "scripts": {
+        "prebuild": "npm install --include=dev --no-audit --no-fund",
         "build": "vue-tsc && vite build",
         "dev": "vite",
         "typecheck": "vue-tsc --noEmit",

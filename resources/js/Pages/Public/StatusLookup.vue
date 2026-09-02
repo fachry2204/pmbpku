@@ -16,7 +16,7 @@ const scan = async () => {
     scanning.value = true;
     await nextTick();
     scanner.value = new Html5Qrcode('status-qr-reader');
-    await scanner.value.start(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'environment' }, { fps: 10, qrbox: { width: 220, height: 220 } }, async (value) => { if (value.includes('/cek-status/email/')) { await stopScan(); window.location.href = value; return; } lookup.identifier = value; await stopScan(); }, () => undefined);
+    await scanner.value.start(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'environment' }, { fps: 10, qrbox: { width: 220, height: 220 } }, async (value: string) => { if (value.includes('/cek-status/email/')) { await stopScan(); window.location.href = value; return; } lookup.identifier = value; await stopScan(); }, () => undefined);
   } catch (error) {
     await stopScan();
     const denied = error instanceof DOMException && ['NotAllowedError', 'PermissionDeniedError'].includes(error.name);
@@ -43,7 +43,7 @@ const scan = async () => {
         <div class="grid gap-2 sm:grid-cols-2"><button type="button" class="w-full rounded-xl border border-emerald-700 px-4 py-3 font-bold text-emerald-800" @click="scan">Scan QR</button><button :disabled="lookup.processing" class="w-full rounded-xl bg-emerald-800 px-4 py-3 font-bold text-white disabled:opacity-50">
           {{ lookup.processing ? 'Mencari…' : 'Tampilkan Status Pendaftaran' }}
         </button></div>
-        <div v-if="scanning" class="rounded-xl bg-slate-950 p-3 text-center"><div id="status-qr-reader" class="overflow-hidden rounded-lg"></div><button type="button" class="mt-2 rounded-lg bg-white px-3 py-2 text-sm font-semibold" @click="stopScan">Tutup Kamera</button></div>
+        <Teleport to="body"><div v-if="scanning" class="fixed inset-0 z-[100] flex flex-col bg-black"><div class="flex items-center justify-between bg-black/90 px-4 py-3 text-white"><div><b class="block">Scan QR Pendaftaran</b><span class="text-xs text-white/70">Arahkan kamera ke QR pada dokumen pendaftaran</span></div><button type="button" class="rounded-xl border border-white/40 px-4 py-2 text-sm font-bold" @click="stopScan">Tutup</button></div><div class="grid min-h-0 flex-1 place-items-center overflow-hidden"><div id="status-qr-reader" class="w-full max-w-2xl overflow-hidden bg-black"></div></div></div></Teleport>
       </form>
     </section>
   </main>
