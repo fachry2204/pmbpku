@@ -19,7 +19,7 @@ final class NotificationTemplateService
         'document_incomplete' => 'Dokumen pendaftaran {registration_number} memerlukan perbaikan. Silakan cek status pendaftaran untuk melihat catatan panitia dan unggah dokumen yang sesuai.',
         'document_complete' => 'Alhamdulillah, seluruh dokumen pendaftaran {registration_number} telah dinyatakan lengkap.',
         'selection_not_scheduled' => 'Status seleksi {registration_number} diperbarui: belum dijadwalkan. Pantau informasi berikutnya melalui halaman cek status.',
-        'selection_scheduled' => "Pendaftaran {registration_number} telah masuk jadwal seleksi.\n\nJadwal Seleksi:\nTanggal: {selection_date}\nWaktu: {selection_time} WIB\nLokasi: {selection_location}\n\nSilakan download dan bawa Kartu Peserta Seleksi dari halaman cek status.",
+        'selection_scheduled' => "Pendaftaran {registration_number} telah masuk jadwal seleksi.\n\nJadwal Seleksi:\nTanggal: {selection_date}\nWaktu: {selection_time} WIB\nLokasi: {selection_location}\n\nPersiapan wajib:\n- Download dan bawa Kartu Peserta Seleksi.\n- Bawa ATK lengkap (pulpen, pensil, penghapus, dan alat tulis lain yang diperlukan).\n\nSilakan buka halaman cek status untuk informasi lengkap.",
         'selection_attending_test' => 'Status seleksi {registration_number} diperbarui: sedang mengikuti proses seleksi.',
         'selection_passed' => 'Selamat {full_name}! Anda dinyatakan DITERIMA pada PMB Pendidikan Kader Ulama. Nomor pendaftaran: {registration_number}. Silakan ikuti arahan lanjutan dari panitia.',
         'selection_not_passed' => 'Terima kasih {full_name} telah mengikuti seluruh proses. Berdasarkan hasil seleksi, pendaftaran {registration_number} belum dinyatakan diterima.',

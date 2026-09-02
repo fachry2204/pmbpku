@@ -45,10 +45,10 @@ class SelectionCardController extends Controller
         $applicant->load('documents');
         $pdf = Pdf::loadView('pdf.registration-proof', [
             'applicant' => $applicant,
-            'logoDataUri' => $this->fileDataUri(public_path('images/logo-pku-mui-jakarta.png')),
+            'logoDataUri' => $this->fileDataUri(public_path('images/logo-footer-pku.png')),
             'photoDataUri' => $this->photoDataUri($applicant),
             'registrationQrDataUri' => $this->registrationQrDataUri($applicant),
-        ])->setPaper('a5', 'portrait');
+        ])->setPaper('a4', 'portrait');
 
         return $pdf->download('bukti-registrasi-'.$applicant->registration_number.'.pdf');
     }
