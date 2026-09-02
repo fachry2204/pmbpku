@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -53,7 +54,7 @@ class ApplicantController extends Controller
 
     public function edit(Applicant $applicant): Response
     {
-        return Inertia::render('Admin/Applicants/Edit', ['applicant' => $applicant]);
+        return Inertia::render('Admin/Applicants/Edit', ['applicant' => $applicant->load('documents')]);
     }
 
     public function update(Request $request, Applicant $applicant): RedirectResponse
@@ -67,6 +68,53 @@ class ApplicantController extends Controller
         $applicant->update([...$data, 'email' => strtolower($data['email']), 'whatsapp_normalized' => $phone, 'whatsapp_display' => $whatsapp]);
 
         return redirect()->route('admin.applicants.show', $applicant)->with('success', 'Data pendaftar berhasil diperbarui.');
+    }
+
+    public function uploadDocument(Request $request, Applicant $applicant, RcloneStorageService $drive): RedirectResponse
+    {
+        $data = $request->validate([
+            'type' => ['required', Rule::in(['recommendation_letter', 'diploma', 'photo_4x6', 'identity_card', 'pddikti_screenshot'])],
+            'document' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
+        ]);
+        $file = $request->file('document');
+        $path = $file->storeAs($applicant->storageDirectory(), Str::uuid().'.'.$file->guessExtension(), 'local');
+        $old = null;
+
+        try {
+            DB::transaction(function () use ($request, $applicant, $data, $file, $path, &$old): void {
+                $old = $applicant->documents()->where('type', $data['type'])->latest('version')->lockForUpdate()->first();
+                $version = ($old?->version ?? 0) + 1;
+                $old?->delete();
+                $document = $applicant->documents()->create([
+                    'type' => $data['type'], 'disk' => 'local', 'path' => $path,
+                    'original_name' => $file->getClientOriginalName(), 'mime_type' => $file->getMimeType(),
+                    'extension' => $file->guessExtension(), 'size' => $file->getSize(),
+                    'sha256' => hash_file('sha256', $file->getRealPath()),
+                    'verification_status' => 'pending', 'version' => $version,
+                ]);
+                $applicant->update(['document_status' => DocumentStatus::PendingReview]);
+                DB::table('audit_logs')->insert([
+                    'user_id' => $request->user()->id, 'action' => 'applicant.document.admin_upload',
+                    'auditable_type' => Applicant::class, 'auditable_id' => $applicant->id,
+                    'before_json' => json_encode(['document_id' => $old?->id, 'type' => $data['type']]),
+                    'after_json' => json_encode(['document_id' => $document->id, 'type' => $data['type'], 'version' => $version]),
+                    'ip' => $request->ip(), 'user_agent' => str($request->userAgent())->limit(500), 'created_at' => now(),
+                ]);
+            });
+        } catch (\Throwable $exception) {
+            Storage::disk('local')->delete($path);
+            throw $exception;
+        }
+
+        if ($old) {
+            try {
+                $old->disk === 'rclone' ? $drive->delete($old->path) : Storage::disk($old->disk)->delete($old->path);
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+        }
+
+        return back()->with('success', 'Dokumen berhasil diunggah dan menunggu pemeriksaan.');
     }
 
     public function updateStatus(Request $request, Applicant $applicant): RedirectResponse

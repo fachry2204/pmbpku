@@ -19,6 +19,7 @@
 @layer components {
     .islamic-light-bg,
     .islamic-gradient-page,
+    .islamic-pattern,
     main.min-h-screen.bg-slate-100,
     main.min-h-screen.bg-emerald-50,
     .min-h-screen.bg-gray-100 {
@@ -110,5 +111,63 @@
         border: 1rem double rgba(180, 139, 33, .1);
         border-radius: 50%;
         pointer-events: none;
+    }
+}
+
+/* Background utama PMB: satu aset yang konsisten pada seluruh halaman. */
+html,
+body {
+    min-height: 100%;
+    background: #022f25 url('/images/bg2.png') center center / cover fixed no-repeat !important;
+}
+
+body :is(
+    .islamic-light-bg,
+    .islamic-gradient-page,
+    .islamic-pattern,
+    .status-page,
+    .terms-page,
+    .login-pattern,
+    main.min-h-screen,
+    .min-h-screen.bg-gray-100
+) {
+    background-color: transparent !important;
+    background-image: url('/images/bg2.png') !important;
+    background-position: center center !important;
+    background-size: cover !important;
+    background-repeat: no-repeat !important;
+    background-attachment: fixed !important;
+}
+
+body :is(
+    .islamic-light-bg,
+    .islamic-gradient-page,
+    .islamic-pattern,
+    .status-page,
+    .terms-page,
+    .login-pattern,
+    main.min-h-screen,
+    .min-h-screen.bg-gray-100
+)::before,
+body :is(
+    .islamic-light-bg,
+    .islamic-gradient-page,
+    .islamic-pattern,
+    .status-page,
+    .terms-page,
+    main.min-h-screen,
+    .min-h-screen.bg-gray-100
+)::after {
+    background: none !important;
+    border: 0 !important;
+    outline: 0 !important;
+}
+
+@media (max-width: 640px) {
+    html,
+    body,
+    body :is(.islamic-light-bg, .islamic-gradient-page, .islamic-pattern, .status-page, .terms-page, .login-pattern, main.min-h-screen) {
+        background-position: center top !important;
+        background-attachment: scroll !important;
     }
 }

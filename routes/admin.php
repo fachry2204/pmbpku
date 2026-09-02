@@ -27,6 +27,7 @@ Route::prefix('admin')->middleware(['auth', 'active.admin:admin_pmb,finance,revi
         Route::post('/applicants/bulk-schedule', [ApplicantController::class, 'bulkSchedule'])->name('admin.applicants.bulk-schedule');
         Route::get('/applicants/{applicant}/edit', [ApplicantController::class, 'edit'])->name('admin.applicants.edit');
         Route::put('/applicants/{applicant}', [ApplicantController::class, 'update'])->name('admin.applicants.update');
+        Route::post('/applicants/{applicant}/documents', [ApplicantController::class, 'uploadDocument'])->name('admin.applicants.documents.upload');
         Route::delete('/applicants/{applicant}', [ApplicantController::class, 'destroy'])->name('admin.applicants.destroy');
         Route::get('/applicant-scores', [ApplicantScoreController::class, 'index'])->name('admin.applicant-scores.index');
         Route::patch('/applicant-scores/{applicant}', [ApplicantScoreController::class, 'update'])->name('admin.applicant-scores.update');

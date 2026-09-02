@@ -26,14 +26,15 @@ class StatusLookupController
         $data = $request->validate([
             'identifier' => ['required', 'string', 'max:190'],
         ], [
-            'identifier.required' => 'Masukkan email atau nomor HP/WhatsApp terdaftar.',
+            'identifier.required' => 'Masukkan nomor pendaftaran, email, atau nomor HP/WhatsApp terdaftar.',
         ]);
 
         $identifier = trim($data['identifier']);
         $period = AdmissionPeriod::where('is_active', true)->first();
-        $applicant = null;
+        $registrationNumber = strtoupper((string) preg_replace('/\s+/', '', $identifier));
+        $applicant = Applicant::whereRaw('UPPER(registration_number) = ?', [$registrationNumber])->first();
 
-        if ($period) {
+        if (! $applicant && $period) {
             $year = (int) $settings->get('pmb.registration_year', $period->year);
             $query = Applicant::where('admission_period_id', $period->id)
                 ->where('registration_number', 'like', $period->registration_prefix.'-'.$year.'-%');
@@ -51,7 +52,7 @@ class StatusLookupController
 
         if (! $applicant) {
             throw ValidationException::withMessages([
-                'identifier' => 'Email atau nomor HP tidak ditemukan pada periode pendaftaran aktif.',
+                'identifier' => 'Nomor pendaftaran, email, atau nomor HP tidak ditemukan.',
             ]);
         }
 

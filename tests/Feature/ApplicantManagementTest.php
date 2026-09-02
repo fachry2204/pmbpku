@@ -8,6 +8,7 @@ use App\Models\Applicant;
 use App\Models\User;
 use App\Services\SettingsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -35,6 +36,34 @@ class ApplicantManagementTest extends TestCase
         $this->actingAs($this->admin())->get("/admin/applicants/{$a->id}/edit")->assertOk();
         $this->actingAs($this->admin())->put("/admin/applicants/{$a->id}", ['full_name' => 'Nama Baru', 'birth_place' => 'Bandung', 'birth_date' => '2001-02-03', 'address' => 'Alamat Baru', 'email' => 'baru@example.test', 'whatsapp' => '081222222222'])->assertRedirect("/admin/applicants/{$a->id}");
         $this->assertDatabaseHas('applicants', ['id' => $a->id, 'full_name' => 'Nama Baru', 'email' => 'baru@example.test']);
+    }
+
+    public function test_admin_can_upload_and_replace_registration_document_from_edit_page(): void
+    {
+        Storage::fake('local');
+        Queue::fake();
+        $applicant = $this->applicant();
+        $oldPath = $applicant->storageDirectory().'/old.pdf';
+        Storage::disk('local')->put($oldPath, 'old-document');
+        $old = $applicant->documents()->create([
+            'type' => 'diploma', 'disk' => 'local', 'path' => $oldPath,
+            'original_name' => 'ijazah-lama.pdf', 'mime_type' => 'application/pdf',
+            'extension' => 'pdf', 'size' => 12, 'sha256' => hash('sha256', 'old-document'),
+        ]);
+
+        $this->actingAs($this->admin())->post("/admin/applicants/{$applicant->id}/documents", [
+            'type' => 'diploma',
+            'document' => UploadedFile::fake()->create('ijazah-baru.pdf', 200, 'application/pdf'),
+        ])->assertSessionHasNoErrors()->assertSessionHas('success');
+
+        $new = $applicant->documents()->where('type', 'diploma')->firstOrFail();
+        $this->assertNotSame($old->id, $new->id);
+        $this->assertSame(2, $new->version);
+        $this->assertStringStartsWith($applicant->storageDirectory().'/', $new->path);
+        Storage::disk('local')->assertExists($new->path);
+        Storage::disk('local')->assertMissing($oldPath);
+        $this->assertSoftDeleted('applicant_documents', ['id' => $old->id]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'applicant.document.admin_upload', 'auditable_id' => $applicant->id]);
     }
 
     public function test_applicant_list_can_be_filtered_by_registration_year(): void
