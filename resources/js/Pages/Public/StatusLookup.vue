@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
-const lookup = useForm({ identifier: '' });
+const props = defineProps<{ initialIdentifier?: string }>();
+const lookup = useForm({ identifier: props.initialIdentifier || '' });
 </script>
 
 <template>

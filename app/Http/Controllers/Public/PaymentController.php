@@ -61,10 +61,14 @@ class PaymentController extends Controller
             $remote = $gateway->create($applicant, $data['method'], $merchantRef, $amount);
         } catch (Throwable $exception) {
             report($exception);
+            $gatewayMessage = $exception->getMessage();
+            $safeGatewayMessage = preg_match('/^(Duitku|Tripay|Midtrans):\s+[^\r\n]{1,300}$/u', $gatewayMessage)
+                ? $gatewayMessage
+                : 'Transaksi pembayaran belum dapat dibuat. Periksa konfigurasi payment gateway atau hubungi panitia.';
             throw ValidationException::withMessages([
-                'method' => app()->isProduction()
-                    ? 'Transaksi pembayaran belum dapat dibuat. Periksa kembali metode pembayaran atau hubungi panitia.'
-                    : $exception->getMessage(),
+                // Provider rejection messages contain no credential values and
+                // are useful to diagnose mismatched sandbox/production keys.
+                'method' => $safeGatewayMessage,
             ]);
         }
         $isTripay = $provider === 'tripay';
@@ -90,20 +94,4 @@ class PaymentController extends Controller
         return Inertia::location($payment->checkout_url);
     }
 
-    public function manual(Request $request, string $registrationNumber, SettingsService $settings): RedirectResponse
-    {
-        $request->validate(['payment_proof' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120']]);
-        $applicant = Applicant::with('admissionPeriod')->where('registration_number', $registrationNumber)->firstOrFail();
-        abort_if($applicant->payment_status->value === 'paid', 422, 'Pembayaran sudah lunas.');
-        $file = $request->file('payment_proof');
-        $amount = $this->amount($applicant, $settings);
-        DB::transaction(function () use ($applicant, $file, $amount) {
-            $path = $file->storeAs($applicant->storageDirectory(), Str::uuid().'.'.$file->guessExtension(), 'local');
-            $applicant->documents()->create(['type' => 'payment_proof', 'disk' => 'local', 'path' => $path, 'original_name' => $file->getClientOriginalName(), 'mime_type' => $file->getMimeType(), 'extension' => $file->guessExtension(), 'size' => $file->getSize(), 'sha256' => hash_file('sha256', $file->getRealPath()), 'verification_status' => 'pending']);
-            Payment::create(['applicant_id' => $applicant->id, 'provider' => 'manual', 'merchant_ref' => 'MANUAL-'.Str::upper(Str::random(16)), 'base_amount' => $amount, 'total_amount' => $amount, 'status' => 'pending']);
-            $applicant->update(['payment_status' => 'pending']);
-        });
-
-        return back()->with('status', 'Bukti pembayaran diterima dan menunggu verifikasi finance.');
-    }
 }

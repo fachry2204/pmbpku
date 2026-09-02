@@ -4,7 +4,7 @@ defineProps<{ content: any; registrationYear: number }>();
 const services=[
   {no:'01',title:'Pendaftaran Online',text:'Isi formulir dan unggah dokumen persyaratan secara aman.',href:'/pendaftaran'},
   {no:'02',title:'Cek Status',text:'Pantau pembayaran, verifikasi berkas, dan hasil seleksi.',href:'/cek-status'},
-  {no:'03',title:'Pembayaran Terintegrasi',text:'Pembayaran otomatis atau transfer manual dalam satu alur.',href:'/pendaftaran'},
+  {no:'03',title:'Pembayaran Terintegrasi',text:'Pembayaran otomatis melalui payment gateway dalam satu alur.',href:'/pendaftaran'},
   {no:'04',title:'Informasi Seleksi',text:'Jadwal, lokasi, dan hasil tes tersedia dalam satu portal.',href:'/cek-status'},
 ];
 </script>

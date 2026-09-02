@@ -1,15 +1,27 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import { computed, onMounted } from 'vue';
 type Channel = { code: string; name: string; group?: string; icon_url?: string | null };
 const props = defineProps<{ applicant: any; registrationFee: number; channels: Channel[]; error: string | null; selectedMethod?: string; registered?: boolean }>();
 const form = useForm({ method: props.selectedMethod || '' });
-const manual = useForm({ payment_proof: null as File | null });
 const selectedChannel = computed(() => props.channels.find(channel => channel.code === form.method));
 const rupiah = (value: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value);
 const startGatewayPayment = () => form.post(`/pembayaran/${props.applicant.registration_number}/gateway`, { preserveScroll: true });
 onMounted(() => {
-  if (props.registered && form.method && !props.error) startGatewayPayment();
+  if (!props.registered || !form.method || props.error) return;
+
+  // A rejected gateway request redirects back to this same Inertia page. Keep
+  // the automatic hand-off to one attempt so it cannot remount and submit in
+  // a loop until Laravel responds with HTTP 429. The button remains available
+  // for a deliberate retry after the error is shown.
+  const attemptKey = `pmb-payment-auto:${props.applicant.registration_number}:${form.method}`;
+  try {
+    if (sessionStorage.getItem(attemptKey)) return;
+    sessionStorage.setItem(attemptKey, '1');
+  } catch {
+    // A disabled sessionStorage must not prevent checkout.
+  }
+  startGatewayPayment();
 });
 </script>
 
@@ -36,7 +48,10 @@ onMounted(() => {
           <button :disabled="form.processing || !form.method" class="w-full rounded-xl bg-emerald-800 py-3 font-bold text-white disabled:opacity-50">{{ form.processing ? 'Memproses…' : 'Bayar Sekarang →' }}</button>
         </form>
       </div>
-      <div class="border-t pt-6"><h2 class="text-xl font-bold">Transfer manual</h2><p class="mt-1 text-sm text-slate-600">Gunakan hanya bila metode manual diizinkan panitia. Status menunggu verifikasi finance.</p><form class="mt-3" @submit.prevent="manual.post(`/pembayaran/${props.applicant.registration_number}/manual`, { forceFormData: true })"><input type="file" accept=".jpg,.jpeg,.png,.pdf" required @change="manual.payment_proof = (($event.target as HTMLInputElement).files?.[0] || null)" /><button class="mt-3 w-full rounded-xl border border-emerald-800 py-3 font-bold text-emerald-900">Kirim bukti transfer</button></form></div>
+      <div class="border-t pt-6">
+        <p class="text-center text-sm text-slate-600">Sudah melakukan pembayaran atau ingin memantau proses pendaftaran?</p>
+        <Link :href="`/cek-status?identifier=${encodeURIComponent(applicant.registration_number)}`" class="mt-3 flex w-full items-center justify-center rounded-xl border border-emerald-800 py-3 font-bold text-emerald-900 transition hover:bg-emerald-50">← Kembali ke Cek Status Pendaftaran</Link>
+      </div>
     </section>
   </main>
 </template>

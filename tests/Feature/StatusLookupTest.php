@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AdmissionPeriod;
 use App\Models\Applicant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class StatusLookupTest extends TestCase
@@ -46,6 +47,25 @@ class StatusLookupTest extends TestCase
         $this->post('/cek-status', ['identifier' => '  pku-2026-000009  '])
             ->assertRedirect(route('status.show'))
             ->assertSessionHas('status_applicant_id', $applicant->id);
+    }
+
+    public function test_signed_email_link_opens_applicant_detail_without_lookup(): void
+    {
+        $applicant = $this->applicant();
+        $url = URL::temporarySignedRoute('status.email', now()->addHour(), ['applicant' => $applicant->id]);
+
+        $this->get($url)
+            ->assertRedirect(route('status.show'))
+            ->assertSessionHas('status_applicant_id', $applicant->id);
+
+        $this->get(route('status.show'))->assertOk();
+    }
+
+    public function test_unsigned_email_link_cannot_open_applicant_detail(): void
+    {
+        $applicant = $this->applicant();
+
+        $this->get(route('status.email', $applicant))->assertForbidden();
     }
 
     public function test_unknown_identity_returns_validation_error(): void

@@ -26,10 +26,10 @@ Route::get('/pendaftaran', [RegistrationController::class, 'create'])->name('reg
 Route::post('/pendaftaran', [RegistrationController::class, 'store'])->middleware('throttle:5,1')->name('registration.store');
 Route::get('/pendaftaran/{registrationNumber}/berhasil', [RegistrationController::class, 'success'])->name('registration.success');
 Route::get('/pembayaran/{registrationNumber}', [PaymentController::class, 'show'])->name('payment.show');
-Route::post('/pembayaran/{registrationNumber}/gateway', [PaymentController::class, 'create'])->middleware('throttle:5,10')->name('payment.create');
-Route::post('/pembayaran/{registrationNumber}/manual', [PaymentController::class, 'manual'])->middleware('throttle:3,10')->name('payment.manual');
+Route::post('/pembayaran/{registrationNumber}/gateway', [PaymentController::class, 'create'])->middleware('throttle:10,1')->name('payment.create');
 Route::get('/cek-status', [StatusLookupController::class, 'index'])->name('status.index');
 Route::post('/cek-status', [StatusLookupController::class, 'lookup'])->middleware('throttle:10,10')->name('status.lookup');
+Route::get('/cek-status/email/{applicant}', [StatusLookupController::class, 'emailAccess'])->middleware(['signed', 'throttle:20,1'])->name('status.email');
 Route::get('/cek-status/detail', [StatusLookupController::class, 'show'])->name('status.show');
 Route::get('/cek-status/foto', [StatusLookupController::class, 'photo'])->name('status.photo');
 Route::post('/cek-status/{applicant}/documents/{type}/revision', DocumentRevisionController::class)->middleware('throttle:5,10')->name('status.document-revision');
