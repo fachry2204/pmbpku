@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\SendApplicantNotification;
 use App\Models\AdmissionPeriod;
 use App\Models\Applicant;
 use App\Models\User;
+use App\Services\SettingsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -136,6 +138,11 @@ class ApplicantManagementTest extends TestCase
     public function test_admin_can_bulk_schedule_selected_applicants(): void
     {
         Queue::fake();
+        app(SettingsService::class)->put(
+            'notifications',
+            'notifications.selection_scheduled',
+            'Pendaftaran {registration_number} telah masuk jadwal seleksi. Silakan cek status untuk informasi selengkapnya.'
+        );
         $first = $this->applicant();
         $second = $first->replicate(['registration_number', 'submission_uuid', 'email', 'whatsapp_normalized']);
         $second->fill([
@@ -157,6 +164,7 @@ class ApplicantManagementTest extends TestCase
         $this->assertDatabaseHas('applicant_test_sessions', ['applicant_id' => $first->id, 'attendance_status' => 'assigned']);
         $this->assertDatabaseHas('applicant_test_sessions', ['applicant_id' => $second->id, 'attendance_status' => 'assigned']);
         $this->assertDatabaseHas('audit_logs', ['action' => 'applicant.selection.bulk_schedule', 'auditable_id' => $first->id]);
+        Queue::assertPushed(SendApplicantNotification::class, fn (SendApplicantNotification $job) => str_contains($job->message, 'Tanggal:') && str_contains($job->message, 'Waktu: 13:30 WIB'));
     }
 
     public function test_manual_payment_status_saves_the_required_reason(): void
