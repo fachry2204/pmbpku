@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Throwable;
 
 class PaymentController extends Controller
@@ -46,7 +47,7 @@ class PaymentController extends Controller
         ]);
     }
 
-    public function create(Request $request, string $registrationNumber, PaymentGatewayService $gateway, SettingsService $settings): RedirectResponse
+    public function create(Request $request, string $registrationNumber, PaymentGatewayService $gateway, SettingsService $settings): RedirectResponse|SymfonyResponse
     {
         $data = $request->validate(['method' => ['required', 'string', 'max:30']]);
         $applicant = Applicant::with('admissionPeriod')->where('registration_number', $registrationNumber)->firstOrFail();
@@ -82,7 +83,11 @@ class PaymentController extends Controller
             throw ValidationException::withMessages(['method' => 'Tautan pembayaran belum tersedia. Silakan coba kembali.']);
         }
 
-        return redirect()->away($payment->checkout_url);
+        // The payment form is submitted through Inertia (XHR). A regular external
+        // redirect is followed as an AJAX request and can leave the applicant on
+        // the current page. Inertia::location instructs the browser to perform a
+        // full-page navigation to the gateway checkout URL.
+        return Inertia::location($payment->checkout_url);
     }
 
     public function manual(Request $request, string $registrationNumber, SettingsService $settings): RedirectResponse

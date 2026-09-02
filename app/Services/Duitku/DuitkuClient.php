@@ -36,9 +36,14 @@ class DuitkuClient
             'amount' => $amount,
             'datetime' => $datetime,
             'signature' => DuitkuSignature::paymentMethods($merchant, $amount, $datetime, $apiKey),
-        ])->throw()->json();
+        ]);
+        $data = $response->json() ?: [];
+        if (! $response->successful() || ($data['responseCode'] ?? '') !== '00') {
+            $message = $data['responseMessage'] ?? $data['Message'] ?? 'Daftar metode pembayaran tidak tersedia.';
+            throw new RuntimeException('Duitku: '.str($message)->limit(300));
+        }
 
-        return collect($response['paymentFee'] ?? [])->map(fn (array $channel) => [
+        return collect($data['paymentFee'] ?? [])->map(fn (array $channel) => [
             'code' => $channel['paymentMethod'] ?? '',
             'name' => $channel['paymentName'] ?? $channel['paymentMethod'] ?? 'Pembayaran',
             'group' => $channel['paymentGroup'] ?? 'Duitku',
@@ -50,6 +55,9 @@ class DuitkuClient
     public function create(Applicant $applicant, string $method, string $merchantOrderId, int $amount): array
     {
         [$merchant, $apiKey] = $this->credentials();
+        if (! preg_match('/^[A-Za-z0-9]{2}$/', $method)) {
+            throw new RuntimeException('Duitku: kode metode pembayaran tidak valid.');
+        }
         $localPhone = preg_replace('/^62/', '0', $applicant->whatsapp_normalized);
         $names = preg_split('/\s+/', trim($applicant->full_name), 2);
         $payload = [
@@ -58,6 +66,8 @@ class DuitkuClient
             'paymentMethod' => $method,
             'merchantOrderId' => $merchantOrderId,
             'productDetails' => 'Biaya Pendaftaran PMB '.$applicant->registration_number,
+            'additionalParam' => http_build_query(['registration_number' => $applicant->registration_number]),
+            'merchantUserInfo' => $applicant->registration_number,
             'email' => $applicant->email,
             'phoneNumber' => $localPhone,
             'customerVaName' => mb_substr($applicant->full_name, 0, 20),
@@ -73,7 +83,7 @@ class DuitkuClient
                 'phoneNumber' => $localPhone,
             ],
             'callbackUrl' => route('webhooks.duitku'),
-            'returnUrl' => route('status.index'),
+            'returnUrl' => route('registration.success', $applicant->registration_number),
             'signature' => DuitkuSignature::inquiry($merchant, $merchantOrderId, $amount, $apiKey),
             'expiryPeriod' => 1440,
         ];
@@ -82,6 +92,10 @@ class DuitkuClient
         if (! $response->successful() || ($data['statusCode'] ?? '') !== '00' || empty($data['reference']) || empty($data['paymentUrl'])) {
             $message = $data['statusMessage'] ?? $data['Message'] ?? $data['message'] ?? 'Transaksi ditolak oleh Duitku.';
             throw new RuntimeException('Duitku: '.str($message)->limit(300));
+        }
+        $paymentHost = strtolower((string) parse_url((string) $data['paymentUrl'], PHP_URL_HOST));
+        if (($data['merchantCode'] ?? '') !== $merchant || (int) ($data['amount'] ?? -1) !== $amount || ! in_array($paymentHost, ['sandbox.duitku.com', 'passport.duitku.com'], true)) {
+            throw new RuntimeException('Duitku: respons transaksi tidak valid.');
         }
         return $data;
     }

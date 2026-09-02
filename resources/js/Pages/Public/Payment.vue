@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 type Channel = { code: string; name: string; group?: string; icon_url?: string | null };
 const props = defineProps<{ applicant: any; registrationFee: number; channels: Channel[]; error: string | null; selectedMethod?: string; registered?: boolean }>();
 const form = useForm({ method: props.selectedMethod || '' });
 const manual = useForm({ payment_proof: null as File | null });
 const selectedChannel = computed(() => props.channels.find(channel => channel.code === form.method));
 const rupiah = (value: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value);
+const startGatewayPayment = () => form.post(`/pembayaran/${props.applicant.registration_number}/gateway`, { preserveScroll: true });
+onMounted(() => {
+  if (props.registered && form.method && !props.error) startGatewayPayment();
+});
 </script>
 
 <template>
@@ -17,7 +21,8 @@ const rupiah = (value: number) => new Intl.NumberFormat('id-ID', { style: 'curre
       <div>
         <h2 class="text-xl font-bold">Pembayaran otomatis</h2>
         <div v-if="error" class="mt-3 rounded-xl bg-amber-50 p-4 text-amber-900">{{ error }}</div>
-        <form v-else class="mt-3 space-y-4" @submit.prevent="form.post(`/pembayaran/${applicant.registration_number}/gateway`)">
+        <form v-else class="mt-3 space-y-4" @submit.prevent="startGatewayPayment">
+          <div v-if="registered && form.processing" class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800">Menghubungkan ke halaman pembayaran. Mohon tunggu dan jangan tutup halaman ini…</div>
           <div v-if="form.errors.method" role="alert" class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">{{ form.errors.method }}</div>
           <div v-if="selectedMethod" class="rounded-2xl border-2 border-emerald-700 bg-emerald-50 p-5">
             <p class="text-xs font-bold uppercase tracking-wider text-emerald-700">Metode yang dipilih</p>
