@@ -4,11 +4,11 @@
     <meta charset="utf-8">
     <title>Kartu Peserta Seleksi {{ $applicant->registration_number }}</title>
     <style>
-        @page { margin: 0; }
+        @page { size: 105mm 80mm; margin: 0; }
         * { box-sizing: border-box; }
-        html, body { width: 100%; height: 100%; }
+        html, body { width: 105mm; height: 80mm; }
         body { margin: 0; color: #12372f; font-family: DejaVu Sans, sans-serif; background: #f7f5ec; }
-        .card { position: relative; width: 100%; height: 100%; padding: 11px 13px; overflow: hidden; border: 3px solid #064e3b; background: #fffdf8; }
+        .card { position: relative; width: 105mm; height: 80mm; padding: 11px 13px; overflow: hidden; border: 3px solid #064e3b; background: #fffdf8; }
         .pattern { position: absolute; right: -58px; top: -65px; width: 230px; height: 230px; border: 2px solid #d4af37; border-radius: 50%; opacity: .3; }
         .pattern.two { right: -20px; top: -25px; width: 150px; height: 150px; }
         .header { height: 42px; padding-bottom: 6px; border-bottom: 2px solid #d4af37; }

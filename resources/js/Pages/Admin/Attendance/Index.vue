@@ -1,29 +1,24 @@
 <script setup lang="ts">
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
+import { Html5Qrcode } from 'html5-qrcode';
 
 const props = defineProps<{ identifier: string; notFound: boolean; applicant: any | null }>();
 const page = usePage() as any;
 const search = ref(props.identifier || '');
 const scanning = ref(false);
-const video = ref<HTMLVideoElement | null>(null);
-let stream: MediaStream | null = null;
+const scanner = ref<Html5Qrcode | null>(null);
 const form = useForm({ applicant_id: props.applicant?.id || '', registration_number: props.applicant?.registration_number || '' });
 const isAttended = computed(() => props.applicant?.selection_status === 'attending_test' || props.applicant?.schedule?.attendance_status === 'attended');
 const canAttend = computed(() => props.applicant?.selection_status === 'scheduled' && !!props.applicant?.schedule);
 const find = () => router.get('/absen', { identifier: search.value }, { preserveState: false, replace: true });
 const attend = () => { form.applicant_id = props.applicant.id; form.registration_number = props.applicant.registration_number; form.post('/absen', { preserveScroll: true }); };
-const stopScan = () => { stream?.getTracks().forEach((track) => track.stop()); stream = null; scanning.value = false; };
+const stopScan = async () => { if (scanner.value) { await scanner.value.stop().catch(() => undefined); scanner.value.clear(); scanner.value = null; } scanning.value = false; };
 const scan = async () => {
-  const Detector = (window as any).BarcodeDetector;
-  if (!Detector || !navigator.mediaDevices?.getUserMedia) { window.alert('Pemindaian QR tidak didukung browser ini. Masukkan nomor pendaftaran secara manual.'); return; }
   scanning.value = true;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-    if (video.value) video.value.srcObject = stream;
-    const detector = new Detector({ formats: ['qr_code'] });
-    const read = async () => { if (!scanning.value || !video.value) return; const codes = await detector.detect(video.value); if (codes[0]?.rawValue) { try { const url = new URL(codes[0].rawValue); search.value = url.searchParams.get('identifier') || codes[0].rawValue; } catch { search.value = codes[0].rawValue; } stopScan(); find(); return; } requestAnimationFrame(read); };
-    await video.value?.play(); read();
+    scanner.value = new Html5Qrcode('attendance-qr-reader');
+    await scanner.value.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 220, height: 220 } }, async (value) => { try { const url = new URL(value); search.value = url.searchParams.get('identifier') || value; } catch { search.value = value; } await stopScan(); find(); }, () => undefined);
   } catch { stopScan(); window.alert('Kamera tidak dapat diakses. Pastikan izin kamera diberikan.'); }
 };
 </script>
@@ -35,7 +30,7 @@ const scan = async () => {
       <header class="text-center text-white"><p class="text-xs font-black uppercase tracking-[.2em] text-amber-300">Petugas Seleksi</p><h1 class="mt-2 text-3xl font-black">Absensi Peserta</h1><p class="mt-2 text-sm text-emerald-50/80">Scan QR pada kartu peserta atau cari menggunakan nomor pendaftaran, nomor telepon, maupun email.</p></header>
 
       <form class="mt-7 flex flex-wrap gap-2 rounded-2xl border border-white/20 bg-white p-3 shadow-2xl" @submit.prevent="find"><input v-model="search" autofocus required class="min-w-0 flex-1 rounded-xl border-slate-300 px-4 py-3 text-sm focus:border-emerald-600 focus:ring-emerald-600" placeholder="Nomor pendaftaran / telepon / email"><button type="button" class="rounded-xl border border-emerald-700 px-4 py-3 text-sm font-black text-emerald-800 hover:bg-emerald-50" @click="scan">▣ Scan QR</button><button class="rounded-xl bg-emerald-800 px-5 py-3 text-sm font-black text-white hover:bg-emerald-700">Cari Peserta</button></form>
-      <div v-if="scanning" class="mt-4 rounded-2xl bg-slate-950 p-4 text-center"><video ref="video" class="mx-auto max-h-64 w-full rounded-xl" muted playsinline></video><button class="mt-3 rounded-lg bg-white px-4 py-2 text-sm font-bold text-slate-800" @click="stopScan">Tutup Kamera</button></div>
+      <div v-if="scanning" class="mt-4 rounded-2xl bg-slate-950 p-4 text-center"><div id="attendance-qr-reader" class="mx-auto max-w-sm overflow-hidden rounded-xl"></div><button class="mt-3 rounded-lg bg-white px-4 py-2 text-sm font-bold text-slate-800" @click="stopScan">Tutup Kamera</button></div>
 
       <div v-if="page.props.flash?.success" class="mt-4 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-sm font-bold text-emerald-800">✓ {{ page.props.flash.success }}</div>
       <div v-if="notFound" class="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">Data peserta tidak ditemukan. Periksa kembali data yang dimasukkan.</div>

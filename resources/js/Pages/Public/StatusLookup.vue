@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Html5Qrcode } from 'html5-qrcode';
+import { ref } from 'vue';
 const props = defineProps<{ initialIdentifier?: string }>();
 const lookup = useForm({ identifier: props.initialIdentifier || '' });
+const scanning = ref(false);
+const scanner = ref<Html5Qrcode | null>(null);
+const stopScan = async () => { if (scanner.value) { await scanner.value.stop().catch(() => undefined); scanner.value.clear(); scanner.value = null; } scanning.value = false; };
+const scan = async () => { scanning.value = true; try { scanner.value = new Html5Qrcode('status-qr-reader'); await scanner.value.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 220, height: 220 } }, async (value) => { if (value.includes('/cek-status/email/')) { await stopScan(); window.location.href = value; return; } lookup.identifier = value; await stopScan(); }, () => undefined); } catch { await stopScan(); window.alert('Kamera tidak dapat diakses. Pastikan izin kamera diberikan.'); } };
 </script>
 
 <template>
@@ -19,9 +25,10 @@ const lookup = useForm({ identifier: props.initialIdentifier || '' });
           <input v-model="lookup.identifier" type="text" required autofocus autocomplete="off" placeholder="" class="mt-2 w-full rounded-xl border-slate-300" />
           <small v-if="lookup.errors.identifier" class="mt-2 block text-sm text-red-700">{{ lookup.errors.identifier }}</small>
         </label>
-        <button :disabled="lookup.processing" class="w-full rounded-xl bg-emerald-800 py-3 font-bold text-white disabled:opacity-50">
+        <div class="flex gap-2"><button type="button" class="rounded-xl border border-emerald-700 px-4 py-3 font-bold text-emerald-800" @click="scan">Scan QR</button><button :disabled="lookup.processing" class="flex-1 rounded-xl bg-emerald-800 py-3 font-bold text-white disabled:opacity-50">
           {{ lookup.processing ? 'Mencari…' : 'Tampilkan Status Pendaftaran' }}
-        </button>
+        </button></div>
+        <div v-if="scanning" class="rounded-xl bg-slate-950 p-3 text-center"><div id="status-qr-reader" class="overflow-hidden rounded-lg"></div><button type="button" class="mt-2 rounded-lg bg-white px-3 py-2 text-sm font-semibold" @click="stopScan">Tutup Kamera</button></div>
       </form>
     </section>
   </main>
