@@ -214,6 +214,17 @@ class ApplicantManagementTest extends TestCase
         $applicant->update(['selection_status' => 'scheduled']);
         $admin = $this->admin();
 
+        $this->actingAs($admin)->get('/admin/attendance')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/Attendance/List')
+                ->where('stats.total', 1)
+                ->where('stats.present', 0)
+                ->where('stats.absent', 1)
+                ->where('participants.0.attendance_status', 'Belum Absen')
+                ->where('participants.0.location', 'Aula Utama MUI DKI Jakarta')
+            );
+
         $this->actingAs($admin)->get('/absen?identifier='.urlencode($applicant->email))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
@@ -242,6 +253,18 @@ class ApplicantManagementTest extends TestCase
             'action' => 'applicant.selection.attendance_confirmed',
             'auditable_id' => $applicant->id,
         ]);
+
+        $this->actingAs($admin)->get('/admin/attendance')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('stats.present', 1)
+                ->where('stats.absent', 0)
+                ->where('participants.0.attendance_status', 'Ikut Seleksi')
+            );
+
+        $this->actingAs($admin)->get('/admin/attendance/pdf')
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
     }
 
     public function test_admin_can_bulk_schedule_selected_applicants(): void

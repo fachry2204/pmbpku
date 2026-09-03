@@ -32,8 +32,12 @@ class RegistrationController extends Controller
         $amount = (int) $settings->get('pmb.registration_fee', 250000);
         try {
             $channels = Cache::remember('payment.channels.'.$gateway->provider().'.'.$gateway->mode().'.'.$amount, 300, fn () => $gateway->channels($amount));
-        } catch (Throwable) {
-            $paymentError = 'Metode pembayaran belum tersedia. Silakan hubungi panitia.';
+        } catch (Throwable $exception) {
+            report($exception);
+            $message = $exception->getMessage();
+            $paymentError = str_starts_with($message, 'Tripay:')
+                ? $message
+                : 'Metode pembayaran belum tersedia. Silakan hubungi panitia.';
         }
 
         return Inertia::render('Public/Register', ['channels' => $channels, 'paymentError' => $paymentError, 'registrationFee' => $amount, 'documentUploadEnabled' => ! $settings->get('registration.document_upload_disabled', false)]);

@@ -7,8 +7,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Applicant;
 use App\Support\IndonesianPhone;
 use App\Services\SettingsService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -17,6 +19,40 @@ use Inertia\Response;
 
 class AttendanceController extends Controller
 {
+    public function adminIndex(SettingsService $settings): Response
+    {
+        $applicants = $this->scheduledApplicants();
+        $rows = $applicants->map(fn (Applicant $applicant) => $this->attendanceRow($applicant, $settings));
+        $present = $rows->where('is_present', true)->count();
+
+        return Inertia::render('Admin/Attendance/List', [
+            'participants' => $rows->values(),
+            'stats' => [
+                'total' => $rows->count(),
+                'present' => $present,
+                'absent' => $rows->count() - $present,
+            ],
+        ]);
+    }
+
+    public function downloadPdf(SettingsService $settings): HttpResponse
+    {
+        $participants = $this->scheduledApplicants()
+            ->map(fn (Applicant $applicant) => $this->attendanceRow($applicant, $settings));
+        $testDates = $participants->pluck('test_date')->filter()->unique()->values();
+        $testDate = $testDates->count() === 1 ? $testDates->first() : ($testDates->isEmpty() ? '-' : 'Sesuai jadwal masing-masing');
+        $registrationYear = (int) $settings->get('pmb.registration_year', now()->year);
+
+        $pdf = Pdf::loadView('pdf.attendance-list', [
+            'participants' => $participants,
+            'testDate' => $testDate,
+            'registrationYear' => $registrationYear,
+            'logoDataUri' => $this->fileDataUri(public_path('images/logo-footer-pku.png')),
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->download('absensi-calon-mahasiswa-pku-'.$registrationYear.'.pdf');
+    }
+
     public function index(Request $request, SettingsService $settings): Response
     {
         $identifier = trim($request->string('identifier')->limit(190)->toString());
@@ -123,5 +159,46 @@ class AttendanceController extends Controller
         } catch (\InvalidArgumentException) {
             return null;
         }
+    }
+
+    private function scheduledApplicants()
+    {
+        return Applicant::query()
+            ->whereIn('selection_status', [SelectionStatus::Scheduled->value, SelectionStatus::AttendingTest->value])
+            ->whereHas('testSessions')
+            ->with(['testSessions' => fn ($query) => $query->orderByDesc('starts_at')])
+            ->orderBy('registration_number')
+            ->get();
+    }
+
+    private function attendanceRow(Applicant $applicant, SettingsService $settings): array
+    {
+        $session = $applicant->testSessions->first();
+        $isPresent = $session?->pivot?->attendance_status === 'attended'
+            || $applicant->selection_status === SelectionStatus::AttendingTest;
+
+        return [
+            'id' => $applicant->id,
+            'registration_number' => $applicant->registration_number,
+            'full_name' => $applicant->full_name,
+            'whatsapp' => $applicant->whatsapp_display,
+            'test_date' => $session?->starts_at?->locale('id')->translatedFormat('d F Y'),
+            'test_time' => $session?->starts_at ? $session->starts_at->format('H:i').' WIB' : null,
+            'location' => trim((string) $settings->get('pmb.selection_location', '')) ?: $session?->location ?: 'Lokasi belum ditentukan',
+            'is_present' => $isPresent,
+            'attendance_status' => $isPresent ? 'Ikut Seleksi' : 'Belum Absen',
+            'attended_at' => $session?->pivot?->attended_at
+                ? Carbon::parse($session->pivot->attended_at)->locale('id')->translatedFormat('d F Y, H:i').' WIB'
+                : null,
+        ];
+    }
+
+    private function fileDataUri(string $path): ?string
+    {
+        if (! is_file($path)) {
+            return null;
+        }
+
+        return 'data:'.(mime_content_type($path) ?: 'image/png').';base64,'.base64_encode(file_get_contents($path));
     }
 }

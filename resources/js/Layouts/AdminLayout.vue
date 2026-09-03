@@ -10,6 +10,7 @@ const menus = [
   ['Dashboard','/admin/dashboard','M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z'],
   ['Data Pendaftar','/admin/applicants','M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87'],
   ['Pembayaran','/admin/payments','M3 6h18v12H3zM3 10h18M7 15h2'],
+  ['Absen Peserta','/admin/attendance','M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'],
   ['Nilai Calon','/admin/applicant-scores','M4 19V5M10 19V9M16 19V3M22 19H2'],
   ['Pengguna','/admin/users','M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10'],
   ['Pesan Terkirim','/admin/notification-logs','M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4'],

@@ -11,6 +11,7 @@ const menus = [
   { label: 'Dashboard', href: '/admin/dashboard', icon: 'grid' },
   { label: 'Data Pendaftar', href: '/admin/applicants', icon: 'users' },
   { label: 'Pembayaran', href: '/admin/payments', icon: 'card' },
+  { label: 'Absen Peserta', href: '/admin/attendance', icon: 'check' },
   { label: 'Nilai Calon', href: '/admin/applicant-scores', icon: 'file' },
   { label: 'Pengguna', href: '/admin/users', icon: 'user' },
   { label: 'Pesan Terkirim', href: '/admin/notification-logs', icon: 'bell' },
@@ -48,6 +49,7 @@ const rupiah = (value: number) => 'Rp ' + Number(value || 0).toLocaleString('id-
               <path v-else-if="menu.icon==='users'" d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
               <path v-else-if="menu.icon==='card'" d="M3 6h18v12H3zM3 10h18M7 15h2" />
               <path v-else-if="menu.icon==='calendar'" d="M3 5h18v16H3zM7 3v4M17 3v4M3 10h18" />
+              <path v-else-if="menu.icon==='check'" d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
               <path v-else-if="menu.icon==='user'" d="M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10" />
               <path v-else-if="menu.icon==='bell'" d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
               <path v-else-if="menu.icon==='globe'" d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20M2 12h20M12 2c3 3 3 17 0 20M12 2c-3 3-3 17 0 20" />

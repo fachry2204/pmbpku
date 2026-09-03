@@ -8,6 +8,16 @@ use RuntimeException;
 
 class TripayClient
 {
+    private function apiKey(): string
+    {
+        $apiKey = trim((string) config('services.tripay.api_key'));
+        if ($apiKey === '') {
+            throw new RuntimeException('Tripay: API Key belum dikonfigurasi.');
+        }
+
+        return $apiKey;
+    }
+
     private function credentials(): array
     {
         $merchant = (string) config('services.tripay.merchant_code');
@@ -24,16 +34,39 @@ class TripayClient
 
     public function channels(int $amount): array
     {
-        [, $apiKey] = $this->credentials();
-        $response = Http::acceptJson()->withToken($apiKey)->timeout(20)->retry(2, 500, throw: false)
-            ->get($this->base().'/merchant/payment-channel')->throw()->json();
-        if (! ($response['success'] ?? false)) throw new RuntimeException($response['message'] ?? 'Channel Tripay tidak tersedia.');
+        $response = Http::acceptJson()->withToken($this->apiKey())->timeout(20)->retry(2, 500, throw: false)
+            ->get($this->base().'/merchant/payment-channel');
+        $payload = $response->json() ?: [];
+        if (! $response->successful() || ! ($payload['success'] ?? false)) {
+            $message = trim((string) ($payload['message'] ?? 'API Tripay tidak dapat dihubungi.'));
+            throw new RuntimeException('Tripay: '.str($message)->limit(180));
+        }
 
-        return collect($response['data'] ?? [])->map(fn (array $channel) => [
-            'code' => $channel['code'] ?? '', 'name' => $channel['name'] ?? 'Pembayaran',
-            'group' => $channel['group'] ?? 'Tripay', 'icon_url' => $channel['icon_url'] ?? null,
-            'fee' => (int) ($channel['total_fee']['customer'] ?? 0),
-        ])->filter(fn (array $channel) => $channel['code'] !== '')->values()->all();
+        $channels = collect($payload['data'] ?? [])
+            ->filter(fn (array $channel) => ($channel['active'] ?? true)
+                && $amount >= (int) ($channel['minimum_amount'] ?? 0)
+                && ($amount <= (int) ($channel['maximum_amount'] ?? PHP_INT_MAX)))
+            ->map(function (array $channel) use ($amount): array {
+                $flatFee = (float) ($channel['fee_customer']['flat'] ?? 0);
+                $percentageFee = (float) ($channel['fee_customer']['percent'] ?? 0);
+
+                return [
+                    'code' => $channel['code'] ?? '',
+                    'name' => $channel['name'] ?? 'Pembayaran',
+                    'group' => $channel['group'] ?? 'Tripay',
+                    'icon_url' => $channel['icon_url'] ?? null,
+                    'fee' => (int) round($flatFee + ($amount * $percentageFee / 100)),
+                ];
+            })
+            ->filter(fn (array $channel) => $channel['code'] !== '')
+            ->values()
+            ->all();
+
+        if ($channels === []) {
+            throw new RuntimeException('Tripay: belum ada channel pembayaran aktif untuk nominal transaksi ini. Aktifkan channel pada dashboard Tripay.');
+        }
+
+        return $channels;
     }
 
     public function create(Applicant $applicant, string $method, string $merchantRef, int $amount): array

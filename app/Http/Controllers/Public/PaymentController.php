@@ -33,8 +33,12 @@ class PaymentController extends Controller
         try {
             $amount = $this->amount($applicant, $settings);
             $channels = Cache::remember('payment.channels.'.$gateway->provider().'.'.$gateway->mode().'.'.$amount, 300, fn () => $gateway->channels($amount));
-        } catch (Throwable) {
-            $error = 'Channel pembayaran sedang tidak tersedia.';
+        } catch (Throwable $exception) {
+            report($exception);
+            $message = $exception->getMessage();
+            $error = str_starts_with($message, 'Tripay:')
+                ? $message
+                : 'Channel pembayaran sedang tidak tersedia.';
         }
 
         return Inertia::render('Public/Payment', [

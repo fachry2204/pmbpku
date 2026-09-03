@@ -10,6 +10,7 @@ use App\Services\SettingsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 use Throwable;
@@ -163,6 +164,15 @@ class SettingsController extends Controller
                 // peserta dan halaman absensi tidak memakai teks lokasi lama.
                 ->where('starts_at', '>=', now()->startOfDay())
                 ->update(['location' => $selectionLocation]);
+        }
+
+        // Jangan memakai daftar channel lama setelah provider, mode, atau
+        // credential payment gateway diperbarui dari halaman pengaturan.
+        $registrationFee = (int) ($data['pmb_registration_fee'] ?? 250000);
+        foreach (['duitku', 'tripay', 'midtrans'] as $provider) {
+            foreach (['sandbox', 'production'] as $mode) {
+                Cache::forget("payment.channels.{$provider}.{$mode}.{$registrationFee}");
+            }
         }
 
         return back()->with('success', 'Pengaturan tersimpan.');

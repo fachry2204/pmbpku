@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\ApplicantController;
 use App\Http\Controllers\Admin\ApplicantScoreController;
+use App\Http\Controllers\Admin\AttendanceController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DocumentReviewController;
@@ -33,6 +34,8 @@ Route::prefix('admin')->middleware(['auth', 'active.admin:admin_pmb,finance,revi
         Route::delete('/applicants/{applicant}', [ApplicantController::class, 'destroy'])->name('admin.applicants.destroy');
         Route::get('/applicant-scores', [ApplicantScoreController::class, 'index'])->name('admin.applicant-scores.index');
         Route::patch('/applicant-scores/{applicant}', [ApplicantScoreController::class, 'update'])->name('admin.applicant-scores.update');
+        Route::get('/attendance', [AttendanceController::class, 'adminIndex'])->name('admin.attendance.index');
+        Route::get('/attendance/pdf', [AttendanceController::class, 'downloadPdf'])->name('admin.attendance.pdf');
     });
 });
 Route::get('admin/documents/{document}/view', [PrivateDocumentController::class, 'inline'])->middleware(['auth', 'active.admin:admin_pmb,reviewer'])->name('admin.documents.view');
