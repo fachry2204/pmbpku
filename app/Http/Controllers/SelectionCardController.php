@@ -66,6 +66,7 @@ class SelectionCardController extends Controller
             'photoDataUri' => $this->photoDataUri($applicant),
             'attendanceQrDataUri' => $this->attendanceQrDataUri($applicant),
             'contactPhone' => $this->contactPhone(),
+            'selectionLocation' => trim((string) app(SettingsService::class)->get('pmb.selection_location', '')),
         ])->setPaper([0, 0, 297.64, 226.77]);
 
         return $pdf->download('kartu-seleksi-'.$applicant->registration_number.'.pdf');

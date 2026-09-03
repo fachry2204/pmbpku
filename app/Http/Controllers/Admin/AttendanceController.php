@@ -6,6 +6,7 @@ use App\Enums\SelectionStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Applicant;
 use App\Support\IndonesianPhone;
+use App\Services\SettingsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -16,7 +17,7 @@ use Inertia\Response;
 
 class AttendanceController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request, SettingsService $settings): Response
     {
         $identifier = trim($request->string('identifier')->limit(190)->toString());
         $applicant = $identifier !== '' ? $this->findApplicant($identifier) : null;
@@ -42,7 +43,7 @@ class AttendanceController extends Controller
                 'schedule' => $session ? [
                     'date' => $session->starts_at->locale('id')->translatedFormat('l, d F Y'),
                     'time' => $session->starts_at->format('H:i').' WIB',
-                    'location' => $session->location ?: 'Lokasi belum ditentukan',
+                    'location' => trim((string) $settings->get('pmb.selection_location', '')) ?: $session->location ?: 'Lokasi belum ditentukan',
                     'attendance_status' => $session->pivot->attendance_status,
                     'attended_at' => $session->pivot->attended_at
                         ? Carbon::parse($session->pivot->attended_at)->locale('id')->translatedFormat('d F Y, H:i').' WIB'

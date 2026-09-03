@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\AdmissionPeriod;
 use App\Models\Setting;
+use App\Models\TestSession;
 use App\Models\User;
 use App\Services\PaymentGatewayService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -49,9 +51,43 @@ class SettingsRegistrationDisplayTest extends TestCase
 
     public function test_selection_location_can_be_saved_from_registration_settings(): void
     {
+        $period = AdmissionPeriod::create(['name' => 'PMB 2026', 'year' => 2026, 'registration_prefix' => 'PKU', 'starts_at' => now()->subDay(), 'ends_at' => now()->addMonth(), 'registration_fee' => 250000, 'is_active' => true]);
+        $session = TestSession::create(['admission_period_id' => $period->id, 'name' => 'Seleksi Lama', 'starts_at' => now()->addDay(), 'location' => null]);
         $admin = User::factory()->create(['role' => 'super_admin', 'is_active' => true]);
         $this->actingAs($admin)->put('/admin/settings', ['pmb_registration_fee' => 250000, 'pmb_selection_location' => 'Aula Utama MUI Provinsi DKI Jakarta', 'registration_document_upload_disabled' => false, 'payment_provider' => 'duitku', 'notifications_whatsapp_enabled' => true, 'notifications_email_enabled' => true])->assertSessionHasNoErrors();
         $this->assertDatabaseHas('settings', ['key' => 'pmb.selection_location', 'value' => 'Aula Utama MUI Provinsi DKI Jakarta']);
+        $this->assertSame('Aula Utama MUI Provinsi DKI Jakarta', $session->fresh()->location);
+    }
+
+    public function test_selection_location_updates_an_existing_upcoming_schedule_location(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin', 'is_active' => true]);
+        $period = AdmissionPeriod::create([
+            'name' => 'PMB 2026',
+            'year' => 2026,
+            'registration_prefix' => 'PKU',
+            'starts_at' => now()->subDay(),
+            'ends_at' => now()->addMonth(),
+            'registration_fee' => 250000,
+            'is_active' => true,
+        ]);
+        $session = TestSession::create([
+            'admission_period_id' => $period->id,
+            'name' => 'Seleksi Mendatang',
+            'starts_at' => now()->addDay(),
+            'location' => 'Informasi panitia',
+        ]);
+
+        $this->actingAs($admin)->put('/admin/settings', [
+            'pmb_registration_fee' => 250000,
+            'pmb_selection_location' => 'LOKASI SAAT INI TES',
+            'registration_document_upload_disabled' => false,
+            'payment_provider' => 'duitku',
+            'notifications_whatsapp_enabled' => true,
+            'notifications_email_enabled' => true,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame('LOKASI SAAT INI TES', $session->fresh()->location);
     }
 
     public function test_empty_smtp_port_does_not_prevent_payment_settings_from_being_saved(): void

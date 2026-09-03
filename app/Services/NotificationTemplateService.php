@@ -46,7 +46,9 @@ final class NotificationTemplateService
             : null;
         $date = $session?->starts_at?->locale('id')->translatedFormat('l, d F Y') ?? '-';
         $time = $session?->starts_at?->format('H:i') ?? '-';
-        $location = $session?->location ?: 'Lokasi akan diinformasikan oleh panitia';
+        $location = trim((string) app(SettingsService::class)->get('pmb.selection_location', ''))
+            ?: $session?->location
+            ?: 'Lokasi akan diinformasikan oleh panitia';
         $containsScheduleVariables = str_contains($template, '{selection_date}') || str_contains($template, '{selection_time}') || str_contains($template, '{selection_location}');
 
         $message = strtr($template, [

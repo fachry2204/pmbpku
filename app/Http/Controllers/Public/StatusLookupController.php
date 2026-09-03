@@ -73,7 +73,7 @@ class StatusLookupController
         return redirect()->route('status.show');
     }
 
-    public function show(Request $request): Response
+    public function show(Request $request, SettingsService $settings): Response
     {
         $id = $request->session()->get('status_applicant_id');
         abort_unless($id, 403);
@@ -102,7 +102,7 @@ class StatusLookupController
             'selection_schedule' => $session ? [
                 'date' => $session->starts_at->locale('id')->translatedFormat('d F Y'),
                 'time' => $session->starts_at->format('H:i').' WIB',
-                'location' => $session->location ?: 'Lokasi akan diinformasikan oleh panitia',
+                'location' => trim((string) $settings->get('pmb.selection_location', '')) ?: $session->location ?: 'Lokasi akan diinformasikan oleh panitia',
             ] : null,
             'selection_card_url' => $session && in_array($applicant->selection_status->value, ['scheduled', 'attending_test'], true)
                 ? route('status.selection-card')

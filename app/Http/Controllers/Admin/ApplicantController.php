@@ -48,14 +48,14 @@ class ApplicantController extends Controller
         ]);
     }
 
-    public function show(Applicant $applicant): Response
+    public function show(Applicant $applicant, SettingsService $settings): Response
     {
         $applicant->load(['documents', 'payments', 'testSessions' => fn ($query) => $query->latest('starts_at')]);
         $session = $applicant->testSessions->first();
         $applicant->setAttribute('selection_schedule', $session ? [
             'date' => $session->starts_at->locale('id')->translatedFormat('d F Y'),
             'time' => $session->starts_at->format('H:i').' WIB',
-            'location' => $session->location ?: 'Lokasi akan diinformasikan oleh panitia',
+            'location' => trim((string) $settings->get('pmb.selection_location', '')) ?: $session->location ?: 'Lokasi akan diinformasikan oleh panitia',
         ] : null);
         $applicant->setAttribute('selection_card_url', $this->canDownloadSelectionCard($applicant, $session)
             ? route('admin.applicants.selection-card', $applicant)

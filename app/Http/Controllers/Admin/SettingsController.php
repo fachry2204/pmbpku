@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Models\TestSession;
 use App\Services\RcloneStorageService;
 use App\Services\SettingsService;
 use Illuminate\Http\RedirectResponse;
@@ -152,6 +153,16 @@ class SettingsController extends Controller
                 continue;
             }
             $settings->put(strtok($key, '.'), $key, $data[$input], $type, $secret);
+        }
+
+        $selectionLocation = trim((string) ($data['pmb_selection_location'] ?? ''));
+        if ($selectionLocation !== '') {
+            TestSession::query()
+                // Lokasi pada tab Pendaftaran adalah lokasi utama seleksi. Sinkronkan
+                // juga jadwal yang telah dibuat tetapi belum berlangsung agar kartu
+                // peserta dan halaman absensi tidak memakai teks lokasi lama.
+                ->where('starts_at', '>=', now()->startOfDay())
+                ->update(['location' => $selectionLocation]);
         }
 
         return back()->with('success', 'Pengaturan tersimpan.');
