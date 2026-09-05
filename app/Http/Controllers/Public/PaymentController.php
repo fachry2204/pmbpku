@@ -109,7 +109,9 @@ class PaymentController extends Controller
         // redirect is followed as an AJAX request and can leave the applicant on
         // the current page. Inertia::location instructs the browser to perform a
         // full-page navigation to the gateway checkout URL.
-        return Inertia::location($payment->checkout_url);
+        return $request->header('X-Inertia')
+            ? Inertia::location($payment->checkout_url)
+            : redirect()->away($payment->checkout_url);
     }
 
     public function mayarLinkPending(Request $request, ?string $registrationNumber = null): Response
@@ -135,6 +137,16 @@ class PaymentController extends Controller
     public function redirectMayarLink(Request $request, string $registrationNumber, PaymentGatewayService $gateway, SettingsService $settings): RedirectResponse|SymfonyResponse
     {
         abort_unless($gateway->provider() === 'mayar_link', 404);
+
+        $existing = Payment::whereHas('applicant', fn ($query) => $query->where('registration_number', $registrationNumber))
+            ->where('provider', 'mayar_link')
+            ->whereIn('status', ['unpaid', 'pending'])
+            ->whereNotNull('checkout_url')
+            ->latest('created_at')
+            ->first();
+        if ($existing) {
+            return redirect()->away($existing->checkout_url);
+        }
 
         return $this->create($request->merge(['method' => 'mayar_link']), $registrationNumber, $gateway, $settings);
     }

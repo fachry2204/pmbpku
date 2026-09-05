@@ -25,8 +25,6 @@ class PrivateDocumentController extends Controller
 
     public function inline(Request $request, ApplicantDocument $document, RcloneStorageService $drive): Response
     {
-        abort_unless($document->type === 'photo_4x6', 404);
-
         return $this->respond($request, $document, false, $drive);
     }
 
@@ -55,7 +53,9 @@ class PrivateDocumentController extends Controller
             $temporary = $drive->downloadToTemporaryFile($document->path);
             $headers = ['Content-Type' => $mime, 'X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'private, no-store, max-age=0'];
 
-            return response()->download($temporary, $filename, $headers)->deleteFileAfterSend(true);
+            return $attachment
+                ? response()->download($temporary, $filename, $headers)->deleteFileAfterSend(true)
+                : response()->file($temporary, $headers)->deleteFileAfterSend(true);
         }
 
         $disk = Storage::disk($document->disk ?: 'local');

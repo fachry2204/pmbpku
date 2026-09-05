@@ -115,7 +115,13 @@ class StatusLookupController
                 'view_url' => $document->disk === 'local' ? route('status.document-view', $document) : null,
             ]))->values(),
             'payments' => $applicant->payments,
-            'payment_url' => route('payment.show', $applicant->registration_number),
+            // Mayar Link tidak membutuhkan halaman pemilihan metode. Tandai
+            // tautan status agar endpoint pembayaran langsung meneruskan ke
+            // checkout Mayar saat tombol diklik.
+            'payment_url' => route('payment.show', array_filter([
+                'registrationNumber' => $applicant->registration_number,
+                'registered' => $settings->get('payment.provider', 'duitku') === 'mayar_link' ? 1 : null,
+            ])),
         ]]);
     }
 
