@@ -85,10 +85,10 @@ class RegistrationController extends Controller
         return redirect()->route('registration.success', ['registrationNumber' => $applicant->registration_number]);
     }
 
-    public function success(string $registrationNumber): Response
+    public function success(string $registrationNumber, SettingsService $settings): Response
     {
         $applicant = Applicant::where('registration_number', $registrationNumber)->firstOrFail();
 
-        return Inertia::render('Public/Success', ['applicant' => ['registration_number' => $applicant->registration_number, 'full_name' => $applicant->full_name, 'payment_status' => $applicant->payment_status]]);
+        return Inertia::render('Public/Success', ['applicant' => ['registration_number' => $applicant->registration_number, 'full_name' => $applicant->full_name, 'payment_status' => $applicant->payment_status], 'mayarLinkUrl' => $settings->get('payment.provider', 'duitku') === 'mayar_link' ? route('payment.mayar-link.redirect', $applicant->registration_number) : null]);
     }
 }

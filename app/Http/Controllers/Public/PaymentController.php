@@ -126,4 +126,11 @@ class PaymentController extends Controller
         ]);
     }
 
+    public function redirectMayarLink(Request $request, string $registrationNumber, PaymentGatewayService $gateway, SettingsService $settings): RedirectResponse|SymfonyResponse
+    {
+        abort_unless($gateway->provider() === 'mayar_link', 404);
+
+        return $this->create($request->merge(['method' => 'mayar_link']), $registrationNumber, $gateway, $settings);
+    }
+
 }

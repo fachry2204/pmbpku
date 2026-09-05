@@ -148,7 +148,7 @@ const savePayment = () => {
       </div>
       <div class="mt-5 overflow-x-auto rounded-2xl bg-white shadow-sm">
         <table class="w-full min-w-[980px] text-left text-sm">
-          <thead class="bg-emerald-950 text-white"><tr><th class="p-4">Nomor</th><th class="p-4"><label class="flex cursor-pointer items-center gap-2"><input type="checkbox" :checked="allSelectableChecked" class="rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500" aria-label="Pilih semua pendaftar yang dapat dijadwalkan" @change="toggleAllApplicants" />Nama</label></th><th class="p-4">Status Pendaftaran</th><th class="p-4">Pembayaran</th><th class="p-4">Berkas</th><th class="p-4">Seleksi</th><th class="p-4 text-right">Aksi</th></tr></thead>
+          <thead class="bg-emerald-950 text-white"><tr><th class="p-4 text-white">Nomor</th><th class="p-4 text-white"><label class="flex cursor-pointer items-center gap-2 text-white"><input type="checkbox" :checked="allSelectableChecked" class="rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500" aria-label="Pilih semua pendaftar yang dapat dijadwalkan" @change="toggleAllApplicants" /> <span class="text-white">Nama</span></label></th><th class="p-4 text-white">Status Pendaftaran</th><th class="p-4 text-white">Pembayaran</th><th class="p-4 text-white">Berkas</th><th class="p-4 text-white">Seleksi</th><th class="p-4 text-right text-white">Aksi</th></tr></thead>
           <tbody>
             <template v-for="a in applicants.data" :key="a.id">
             <tr class="border-b transition hover:bg-emerald-50/40">
