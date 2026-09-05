@@ -25,8 +25,14 @@ class PaymentController extends Controller
         return (int) $settings->get('pmb.registration_fee', $applicant->admissionPeriod->registration_fee);
     }
 
-    public function show(Request $request, string $registrationNumber, PaymentGatewayService $gateway, SettingsService $settings): Response
+    public function show(Request $request, string $registrationNumber, PaymentGatewayService $gateway, SettingsService $settings): Response|RedirectResponse|SymfonyResponse
     {
+        // Keep compatibility with older success-page links. A Mayar Link
+        // checkout must never stop on this intermediate payment-selection page.
+        if ($request->boolean('registered') && $gateway->provider() === 'mayar_link') {
+            return $this->redirectMayarLink($request, $registrationNumber, $gateway, $settings);
+        }
+
         $applicant = Applicant::with('admissionPeriod')->where('registration_number', $registrationNumber)->firstOrFail();
         $channels = [];
         $error = null;

@@ -56,6 +56,7 @@ class MayarLinkClient
         $fieldKey = trim((string) config('services.mayar_link.registration_field_key'));
         if ($fieldKey !== '') {
             $queryData[$fieldKey] = $applicant->registration_number;
+            $queryData['custom_field['.$fieldKey.']'] = $applicant->registration_number;
         }
         $query = http_build_query($queryData, '', '&', PHP_QUERY_RFC3986);
 
