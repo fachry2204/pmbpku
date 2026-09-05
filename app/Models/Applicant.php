@@ -34,9 +34,6 @@ class Applicant extends Model
             if ($this->selection_status !== SelectionStatus::NotScheduled) {
                 return ['key' => 'selection_stage', 'label' => 'Tahap Seleksi'];
             }
-            if ($this->payment_status === PaymentStatus::Pending) {
-                return ['key' => 'payment_verification', 'label' => 'Verifikasi Pembayaran'];
-            }
             if ($this->document_status === DocumentStatus::Complete) {
                 return ['key' => 'documents_complete', 'label' => 'Berkas Lengkap'];
             }
