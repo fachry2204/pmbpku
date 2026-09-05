@@ -13,7 +13,7 @@ const bulkScheduleEditor = reactive({ open: false, date: '', time: '', error: ''
 const search = () => router.get('/admin/applicants', filters, { preserveState: true, replace: true });
 const statuses: Record<string, { label: string; classes: string }> = {
   unpaid: { label: 'Belum Bayar', classes: 'bg-red-100 text-red-700 ring-red-200' },
-  pending: { label: 'Menunggu', classes: 'bg-amber-100 text-amber-800 ring-amber-200' },
+  pending: { label: 'Verifikasi Pembayaran', classes: 'bg-amber-100 text-amber-800 ring-amber-200' },
   paid: { label: 'Lunas', classes: 'bg-emerald-100 text-emerald-700 ring-emerald-200' },
   failed: { label: 'Gagal', classes: 'bg-red-100 text-red-700 ring-red-200' },
   expired: { label: 'Kedaluwarsa', classes: 'bg-slate-200 text-slate-700 ring-slate-300' },

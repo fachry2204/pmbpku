@@ -29,6 +29,8 @@ Route::get('/pendaftaran', [RegistrationController::class, 'create'])->name('reg
 Route::post('/pendaftaran', [RegistrationController::class, 'store'])->middleware('throttle:5,1')->name('registration.store');
 Route::get('/pendaftaran/{registrationNumber}/berhasil', [RegistrationController::class, 'success'])->name('registration.success');
 Route::get('/pembayaran/{registrationNumber}', [PaymentController::class, 'show'])->name('payment.show');
+Route::get('/pembayaran/mayar-link/proses', [PaymentController::class, 'mayarLinkPending'])->name('payment.mayar-link.pending');
+Route::get('/pembayaran/{registrationNumber}/mayar-link/proses', [PaymentController::class, 'mayarLinkPending'])->name('payment.mayar-link.pending.registration');
 Route::post('/pembayaran/{registrationNumber}/gateway', [PaymentController::class, 'create'])->middleware('throttle:10,1')->name('payment.create');
 Route::get('/cek-status', [StatusLookupController::class, 'index'])->name('status.index');
 Route::post('/cek-status', [StatusLookupController::class, 'lookup'])->middleware('throttle:10,10')->name('status.lookup');

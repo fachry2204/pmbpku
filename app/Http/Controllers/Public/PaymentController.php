@@ -92,6 +92,9 @@ class PaymentController extends Controller
             'response_payload_redacted' => array_intersect_key($remote, array_flip(['merchantCode', 'reference', 'paymentUrl', 'checkout_url', 'vaNumber', 'pay_code', 'amount', 'statusCode', 'statusMessage', 'mayar_invoice_id', 'mayar_transaction_id'])),
         ]));
         $applicant->update(['payment_status' => 'pending']);
+        if ($provider === 'mayar_link') {
+            $request->session()->put('mayar_link_pending_registration', $applicant->registration_number);
+        }
         if (! $payment->checkout_url) {
             throw ValidationException::withMessages(['method' => 'Tautan pembayaran belum tersedia. Silakan coba kembali.']);
         }
@@ -101,6 +104,26 @@ class PaymentController extends Controller
         // the current page. Inertia::location instructs the browser to perform a
         // full-page navigation to the gateway checkout URL.
         return Inertia::location($payment->checkout_url);
+    }
+
+    public function mayarLinkPending(Request $request, ?string $registrationNumber = null): Response
+    {
+        $registrationNumber ??= $request->session()->pull('mayar_link_pending_registration');
+        if (! $registrationNumber) {
+            return Inertia::render('Public/MayarLinkPending', ['applicant' => null]);
+        }
+        $applicant = Applicant::where('registration_number', $registrationNumber)->firstOrFail();
+        if ($applicant->payment_status->value !== 'paid') {
+            $applicant->update(['payment_status' => 'pending']);
+        }
+
+        return Inertia::render('Public/MayarLinkPending', [
+            'applicant' => [
+                'registration_number' => $applicant->registration_number,
+                'full_name' => $applicant->full_name,
+                'payment_status' => $applicant->payment_status,
+            ],
+        ]);
     }
 
 }

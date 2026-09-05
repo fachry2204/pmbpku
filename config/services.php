@@ -58,6 +58,8 @@ return [
     ],
     'mayar_link' => [
         'url' => env('MAYAR_LINK_URL', 'https://dmasiv.myr.id/pl/pku-mui-jakarta-23561/'),
+        // Key of the Mayar custom field "Nomor Pendaftaran" on the published link.
+        'registration_field_key' => env('MAYAR_LINK_REGISTRATION_FIELD_KEY', '418f3a9c-8f8f-409a-9f23-24cc1d363145'),
     ],
     'fonnte' => [
         'base_url' => env('FONNTE_BASE_URL', 'https://api.fonnte.com'),

@@ -60,5 +60,6 @@ class MayarIntegrationTest extends TestCase
         $this->assertStringContainsString('email=mayar%40example.test', $data['paymentUrl']);
         $this->assertStringContainsString('name=Mayar%20Test', $data['paymentUrl']);
         $this->assertStringContainsString('registration_number=PKU-2026-000888', $data['paymentUrl']);
+        $this->assertStringContainsString('418f3a9c-8f8f-409a-9f23-24cc1d363145=PKU-2026-000888', $data['paymentUrl']);
     }
 }
