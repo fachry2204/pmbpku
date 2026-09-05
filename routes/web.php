@@ -38,6 +38,7 @@ Route::post('/cek-status', [StatusLookupController::class, 'lookup'])->middlewar
 Route::get('/cek-status/email/{applicant}', [StatusLookupController::class, 'emailAccess'])->middleware(['signed', 'throttle:20,1'])->name('status.email');
 Route::get('/cek-status/detail', [StatusLookupController::class, 'show'])->name('status.show');
 Route::get('/cek-status/foto', [StatusLookupController::class, 'photo'])->name('status.photo');
+Route::get('/cek-status/dokumen/{document}/view', [StatusLookupController::class, 'documentView'])->name('status.document-view');
 Route::get('/cek-status/kartu-seleksi', [SelectionCardController::class, 'publicDownload'])->name('status.selection-card');
 Route::get('/cek-status/bukti-registrasi', [SelectionCardController::class, 'publicRegistrationDownload'])->name('status.registration-proof');
 Route::post('/cek-status/{applicant}/documents/{type}/revision', DocumentRevisionController::class)->middleware('throttle:5,10')->name('status.document-revision');

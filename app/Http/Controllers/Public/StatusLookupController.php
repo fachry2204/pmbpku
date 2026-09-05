@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Public;
 
 use App\Models\AdmissionPeriod;
 use App\Models\Applicant;
+use App\Models\ApplicantDocument;
 use App\Services\SettingsService;
 use App\Support\IndonesianPhone;
 use Illuminate\Http\RedirectResponse;
@@ -78,7 +79,7 @@ class StatusLookupController
         $id = $request->session()->get('status_applicant_id');
         abort_unless($id, 403);
         $applicant = Applicant::with([
-            'documents:id,applicant_id,type,original_name,verification_status,review_note,created_at',
+            'documents:id,applicant_id,type,original_name,verification_status,review_note,created_at,disk',
             'payments:id,applicant_id,status,checkout_url,base_amount,fee_customer,total_amount,expires_at,created_at',
             'testSessions' => fn ($query) => $query->latest('starts_at'),
         ])->findOrFail($id);
@@ -110,10 +111,36 @@ class StatusLookupController
             'registration_proof_url' => $applicant->payment_status->value === 'paid'
                 ? route('status.registration-proof')
                 : null,
-            'documents' => $applicant->documents,
+            'documents' => $applicant->documents->map(fn ($document) => array_merge($document->toArray(), [
+                'view_url' => $document->disk === 'local' ? route('status.document-view', $document) : null,
+            ]))->values(),
             'payments' => $applicant->payments,
             'payment_url' => route('payment.show', $applicant->registration_number),
         ]]);
+    }
+
+    public function documentView(Request $request, ApplicantDocument $document): StreamedResponse
+    {
+        $id = $request->session()->get('status_applicant_id');
+        abort_unless($id && (string) $document->applicant_id === (string) $id, 403);
+        abort_unless($document->disk === 'local' && Storage::disk('local')->exists($document->path), 404);
+
+        $disk = Storage::disk('local');
+        $filename = preg_replace('/[\x00-\x1F\x7F"]+/u', '_', basename($document->original_name ?: 'dokumen')) ?: 'dokumen';
+        $mime = $document->mime_type ?: $disk->mimeType($document->path) ?: 'application/octet-stream';
+
+        return response()->stream(function () use ($disk, $document): void {
+            $stream = $disk->readStream($document->path);
+            abort_if($stream === false, 404);
+            fpassthru($stream);
+            fclose($stream);
+        }, 200, [
+            'Content-Type' => $mime,
+            'Content-Length' => (string) $disk->size($document->path),
+            'Content-Disposition' => 'inline; filename="'.$filename.'"',
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     public function photo(Request $request): StreamedResponse
