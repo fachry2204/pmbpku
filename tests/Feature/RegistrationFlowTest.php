@@ -28,7 +28,7 @@ class RegistrationFlowTest extends TestCase
         }$response = $this->post('/pendaftaran', [...$files, 'submission_uuid' => '75d913f8-a5df-4cf4-85e1-f8f49d97df36', 'payment_method' => 'BRIVA', 'full_name' => 'Pendaftar Integrasi', 'birth_place' => 'Bandung', 'birth_date' => '2000-01-01', 'address' => 'Alamat lengkap', 'whatsapp' => '081234567890', 'email' => 'register@example.test', 'consent' => true]);
         $a = Applicant::firstOrFail();
         $this->assertStringStartsWith('PKU-2030-', $a->registration_number);
-        $response->assertRedirect(route('payment.show', ['registrationNumber' => $a->registration_number, 'method' => 'BRIVA', 'registered' => 1]));
+        $response->assertRedirect(route('registration.success', ['registrationNumber' => $a->registration_number]));
         $this->assertCount(5, $a->documents);
         foreach ($a->documents as $document) {
             Storage::disk('local')->assertExists($document->path);

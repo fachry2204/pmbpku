@@ -48,6 +48,7 @@ Route::get('admin/reports/applicants.csv', [ReportController::class, 'applicants
 Route::prefix('admin/settings')->middleware(['auth', 'active.admin:super_admin'])->group(function () {
     Route::get('/', [SettingsController::class, 'index'])->name('admin.settings.index');
     Route::put('/', [SettingsController::class, 'update'])->name('admin.settings.update');
+    Route::post('/mayar-key', [SettingsController::class, 'uploadMayarKey'])->middleware('throttle:10,1')->name('admin.settings.mayar-key');
     Route::post('/test-email', [SettingsController::class, 'testEmail'])->middleware('throttle:5,1')->name('admin.settings.test-email');
     Route::post('/test-drive', [SettingsController::class, 'testDrive'])->middleware('throttle:5,1')->name('admin.settings.test-drive');
 });

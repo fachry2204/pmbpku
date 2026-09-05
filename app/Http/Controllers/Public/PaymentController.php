@@ -41,12 +41,17 @@ class PaymentController extends Controller
                 : 'Channel pembayaran sedang tidak tersedia.';
         }
 
+        $selectedMethod = $request->string('method')->toString();
+        if ($selectedMethod === '' && count($channels) === 1) {
+            $selectedMethod = (string) ($channels[0]['code'] ?? '');
+        }
+
         return Inertia::render('Public/Payment', [
             'applicant' => ['registration_number' => $applicant->registration_number, 'full_name' => $applicant->full_name, 'payment_status' => $applicant->payment_status],
             'registrationFee' => $this->amount($applicant, $settings),
             'channels' => $channels,
             'error' => $error,
-            'selectedMethod' => $request->string('method')->toString(),
+            'selectedMethod' => $selectedMethod,
             'registered' => $request->boolean('registered'),
         ]);
     }
@@ -66,7 +71,7 @@ class PaymentController extends Controller
         } catch (Throwable $exception) {
             report($exception);
             $gatewayMessage = $exception->getMessage();
-            $safeGatewayMessage = preg_match('/^(Duitku|Tripay|Midtrans|Mayar):\s+[^\r\n]{1,300}$/u', $gatewayMessage)
+            $safeGatewayMessage = preg_match('/^(Duitku|Tripay|Midtrans|Mayar(?: Link)?):\s+[^\r\n]{1,300}$/u', $gatewayMessage)
                 ? $gatewayMessage
                 : 'Transaksi pembayaran belum dapat dibuat. Periksa konfigurasi payment gateway atau hubungi panitia.';
             throw ValidationException::withMessages([

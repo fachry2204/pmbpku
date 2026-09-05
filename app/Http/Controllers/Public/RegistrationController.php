@@ -35,7 +35,7 @@ class RegistrationController extends Controller
         } catch (Throwable $exception) {
             report($exception);
             $message = $exception->getMessage();
-            $paymentError = str_starts_with($message, 'Tripay:')
+            $paymentError = str_starts_with($message, 'Tripay:') || str_starts_with($message, 'Mayar Link:')
                 ? $message
                 : 'Metode pembayaran belum tersedia. Silakan hubungi panitia.';
         }
@@ -82,7 +82,7 @@ class RegistrationController extends Controller
             report($exception);
         }
 
-        return redirect()->route('payment.show', ['registrationNumber' => $applicant->registration_number, 'method' => $data['payment_method'], 'registered' => 1]);
+        return redirect()->route('registration.success', ['registrationNumber' => $applicant->registration_number]);
     }
 
     public function success(string $registrationNumber): Response

@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\PaymentGatewayService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Http\UploadedFile;
 use Inertia\Testing\AssertableInertia as Assert;
 use Mockery\MockInterface;
 use Tests\TestCase;
@@ -21,6 +22,19 @@ class SettingsRegistrationDisplayTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'super_admin', 'is_active' => true]);
         $this->actingAs($admin)->get('/admin/settings')->assertOk()->assertInertia(fn (Assert $page) => $page->component('Admin/Settings/Index')->where('callbackUrl', route('webhooks.duitku'))->where('tripayCallbackUrl', url('/webhooks/tripay')));
+    }
+
+    public function test_super_admin_can_upload_mayar_agq_api_key(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin', 'is_active' => true]);
+        $file = UploadedFile::fake()->createWithContent('mayar-credentials.AGQ', "MAYAR_API_KEY=mayar-key-".str_repeat('x', 700));
+
+        $this->actingAs($admin)
+            ->post('/admin/settings/mayar-key', ['mayar_key_file' => $file])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success');
+
+        $this->assertSame('mayar-key-'.str_repeat('x', 700), Setting::where('key', 'mayar.api_key')->firstOrFail()->getDecodedValue());
     }
 
     public function test_settings_page_survives_an_unreadable_encrypted_credential(): void

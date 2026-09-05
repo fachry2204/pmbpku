@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\{AdmissionPeriod, Applicant, Payment};
 use App\Services\Mayar\MayarClient;
+use App\Services\Mayar\MayarLinkClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -47,5 +48,17 @@ class MayarIntegrationTest extends TestCase
         $this->assertSame('paid', $applicant->fresh()->payment_status->value);
         $this->assertDatabaseCount('payment_webhook_events', 1);
         $this->assertDatabaseCount('status_histories', 1);
+    }
+
+    public function test_mayar_link_prefills_registration_data(): void
+    {
+        $applicant = $this->applicant();
+        config(['services.mayar_link.url' => 'https://dmasiv.myr.id/pl/pku-mui-jakarta-23561/']);
+
+        $data = app(MayarLinkClient::class)->create($applicant, 'mayar_link', 'PMB-REF-LINK', 250000);
+
+        $this->assertStringContainsString('email=mayar%40example.test', $data['paymentUrl']);
+        $this->assertStringContainsString('name=Mayar%20Test', $data['paymentUrl']);
+        $this->assertStringContainsString('registration_number=PKU-2026-000888', $data['paymentUrl']);
     }
 }

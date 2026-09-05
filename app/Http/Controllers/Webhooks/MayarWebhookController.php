@@ -17,19 +17,27 @@ class MayarWebhookController extends Controller
         abort_unless($event === 'payment.received' && is_array($data), 422, 'Event Mayar tidak valid.');
 
         // Mayar documents JSON webhooks without a signature header. Bind the
-        // notification to a locally-created payment using its transaction ID,
-        // amount and customer email before changing any payment state.
+        // notification to a locally-created payment using its transaction ID
+        // (API invoices) or customer email (published Mayar Links), amount,
+        // and customer email before changing any payment state.
         $reference = (string) ($data['transactionId'] ?? $data['id'] ?? '');
         $amount = (int) ($data['amount'] ?? -1);
         abort_unless($reference !== '' && $amount > 0, 422, 'Data transaksi Mayar tidak lengkap.');
 
         DB::transaction(function () use ($payload, $data, $reference, $amount, $event) {
-            $eventKey = hash('sha256', 'mayar|'.$reference.'|'.($data['updatedAt'] ?? $data['createdAt'] ?? ''));
+            $email = strtolower((string) ($data['customerEmail'] ?? ''));
+            $eventKey = hash('sha256', 'mayar|'.$reference.'|'.$email.'|'.($data['updatedAt'] ?? $data['createdAt'] ?? ''));
             if (DB::table('payment_webhook_events')->where('provider', 'mayar')->where('event_key', $eventKey)->exists()) return;
 
-            $payment = Payment::where('provider', 'mayar')->where('provider_reference', $reference)->lockForUpdate()->firstOrFail();
+            $payment = Payment::where('provider', 'mayar')->where('provider_reference', $reference)->lockForUpdate()->first();
+            if (! $payment && $email !== '') {
+                $payment = Payment::where('provider', 'mayar_link')->whereIn('status', ['unpaid', 'pending'])
+                    ->whereHas('applicant', fn ($query) => $query->whereRaw('LOWER(email) = ?', [$email]))
+                    ->latest('id')->lockForUpdate()->first();
+            }
+            abort_unless($payment, 404, 'Pembayaran Mayar tidak ditemukan.');
             abort_unless($amount === $payment->total_amount, 422, 'Nominal tidak cocok.');
-            abort_unless(strtolower((string) ($data['customerEmail'] ?? '')) === strtolower((string) $payment->applicant->email), 422, 'Email transaksi tidak cocok.');
+            abort_unless($email !== '' && $email === strtolower((string) $payment->applicant->email), 422, 'Email transaksi tidak cocok.');
 
             $mapped = strtolower((string) ($data['transactionStatus'] ?? $data['status'] ?? '')) === 'paid' ? 'paid' : 'failed';
             $before = $payment->status;

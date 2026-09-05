@@ -23,7 +23,7 @@ class StoreApplicantRequest extends FormRequest
     {
         $fileRule = app(SettingsService::class)->get('registration.document_upload_disabled', false) ? ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'] : ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'];
 
-        return ['submission_uuid' => ['required', 'uuid'], 'payment_method' => ['required', 'string', 'max:30'], 'full_name' => ['required', 'string', 'min:3', 'max:150'], 'birth_place' => ['required', 'string', 'min:2', 'max:100'], 'birth_date' => ['required', 'date', 'before_or_equal:today'], 'address' => ['required', 'string', 'max:2000'], 'whatsapp' => ['required', 'string', 'max:30'], 'email' => ['required', 'email:rfc', 'max:190'], 'consent' => ['accepted'], ...collect(['recommendation_letter', 'diploma', 'photo_4x6', 'identity_card', 'pddikti_screenshot'])->mapWithKeys(fn ($key) => [$key => $fileRule])->all()];
+        return ['submission_uuid' => ['required', 'uuid'], 'payment_method' => ['sometimes', 'nullable', 'string', 'max:30'], 'full_name' => ['required', 'string', 'min:3', 'max:150'], 'birth_place' => ['required', 'string', 'min:2', 'max:100'], 'birth_date' => ['required', 'date', 'before_or_equal:today'], 'address' => ['required', 'string', 'max:2000'], 'whatsapp' => ['required', 'string', 'max:30'], 'email' => ['required', 'email:rfc', 'max:190'], 'consent' => ['accepted'], ...collect(['recommendation_letter', 'diploma', 'photo_4x6', 'identity_card', 'pddikti_screenshot'])->mapWithKeys(fn ($key) => [$key => $fileRule])->all()];
     }
 
     public function messages(): array

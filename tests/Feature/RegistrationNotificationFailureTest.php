@@ -28,7 +28,7 @@ class RegistrationNotificationFailureTest extends TestCase
         ]);
 
         $applicant = Applicant::firstOrFail();
-        $response->assertRedirect(route('payment.show', ['registrationNumber'=>$applicant->registration_number,'method'=>'BRIVA','registered'=>1]));
+        $response->assertRedirect(route('registration.success', ['registrationNumber'=>$applicant->registration_number]));
     }
 
     public function test_duplicate_email_returns_validation_error_instead_of_server_error(): void
@@ -61,7 +61,7 @@ class RegistrationNotificationFailureTest extends TestCase
         ]);
 
         $applicant = Applicant::firstOrFail();
-        $response->assertRedirect(route('payment.show',['registrationNumber'=>$applicant->registration_number,'method'=>'BRIVA','registered'=>1]));
+        $response->assertRedirect(route('registration.success',['registrationNumber'=>$applicant->registration_number]));
         $this->assertDatabaseCount('applicant_documents', 0);
     }
 }

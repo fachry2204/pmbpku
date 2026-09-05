@@ -56,6 +56,9 @@ return [
         'mode' => env('MAYAR_MODE', 'sandbox'),
         'api_key' => env('MAYAR_API_KEY'),
     ],
+    'mayar_link' => [
+        'url' => env('MAYAR_LINK_URL', 'https://dmasiv.myr.id/pl/pku-mui-jakarta-23561/'),
+    ],
     'fonnte' => [
         'base_url' => env('FONNTE_BASE_URL', 'https://api.fonnte.com'),
         'token' => env('FONNTE_TOKEN'),

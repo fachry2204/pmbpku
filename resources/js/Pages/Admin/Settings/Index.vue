@@ -10,12 +10,14 @@ const props = defineProps<{ values: Record<string, any>; callbackUrl: string; tr
 const page = usePage() as any;
 const form = useForm(Object.fromEntries(Object.entries(props.values).map(([key, value]) => [key.replaceAll('.', '_'), value])) as Record<string, any>);
 const testForm = useForm({ test_email_recipient: '' });
+const mayarKeyForm = useForm<{ mayar_key_file: File | null }>({ mayar_key_file: null });
+const mayarKeyFileName = ref('');
 const copied = ref('');
 const activeTab = ref<TabKey>('registration');
 const tabs: { key: TabKey; label: string; description: string }[] = [
   { key: 'registration', label: 'Pendaftaran', description: 'Biaya & formulir' },
   { key: 'subjects', label: 'Mapel', description: 'Nama kolom nilai' },
-  { key: 'payment', label: 'Payment Gateway', description: 'Duitku, Tripay, Mayar & Midtrans' },
+  { key: 'payment', label: 'Payment Gateway', description: 'Duitku, Tripay, Mayar Link & API' },
   { key: 'drive', label: 'Google Drive', description: 'Penyimpanan rclone' },
   { key: 'notifications', label: 'Notifikasi', description: 'WhatsApp & Email' },
 ];
@@ -40,7 +42,9 @@ const sections = computed<Section[]>(() => [
   ]},
   { tab: 'payment', title: 'Payment Gateway', description: 'Konfigurasi lingkungan dan kredensial pembayaran otomatis.', accent: 'bg-blue-50 text-blue-700', icon: 'PG', fields: [
     { key: 'payment_provider', label: 'Penyedia Payment Gateway', type: 'provider', hint: 'Pilih satu provider yang digunakan pada halaman pendaftaran.' },
-    ...(form.payment_provider === 'tripay' ? [
+    ...(form.payment_provider === 'mayar_link' ? [
+      { key: 'mayar_link_url', label: 'Mayar Link', type: 'url', hint: 'Link pembayaran Mayar yang akan dibuka setelah data pendaftaran disimpan.' },
+    ] : form.payment_provider === 'tripay' ? [
       { key: 'tripay_mode', label: 'Mode Tripay', type: 'select', hint: 'Gunakan kredensial yang sesuai dengan mode Sandbox atau Production.' },
       { key: 'tripay_merchant_code', label: 'Merchant Code Tripay', type: 'password', hint: 'Kode merchant dari dashboard Tripay.' },
       { key: 'tripay_api_key', label: 'API Key Tripay', type: 'password', hint: 'Digunakan sebagai Bearer token untuk mengakses API Tripay.' },
@@ -51,7 +55,7 @@ const sections = computed<Section[]>(() => [
       { key: 'midtrans_client_key', label: 'Client Key Midtrans', type: 'password', hint: 'Client Key dari dashboard Midtrans. Disimpan untuk kebutuhan integrasi Snap.' },
     ] : form.payment_provider === 'mayar' ? [
       { key: 'mayar_mode', label: 'Mode Mayar', type: 'select', hint: 'Gunakan Sandbox untuk pengujian dan Production setelah akun Mayar aktif.' },
-      { key: 'mayar_api_key', label: 'API Key Mayar', type: 'password', hint: 'API key Read & Write dari dashboard Mayar.' },
+      { key: 'mayar_api_key', label: 'File API Key Mayar (.AGQ)', type: 'mayar-file', hint: 'Upload file .AGQ dari dashboard Mayar. API key tidak perlu ditempel manual.' },
     ] : [
       { key: 'duitku_mode', label: 'Mode Duitku', type: 'select', hint: 'Gunakan kredensial yang sesuai dengan mode Sandbox atau Production.' },
       { key: 'duitku_merchant_code', label: 'Merchant Code Duitku', type: 'password', hint: 'Kode merchant dari dashboard Duitku.' },
@@ -81,6 +85,29 @@ const sections = computed<Section[]>(() => [
   ]},
 ]);
 const visibleSections = computed(() => sections.value.filter(section => section.tab === activeTab.value));
+const chooseMayarKeyFile = (event: Event) => {
+  const file = (event.target as HTMLInputElement).files?.[0] ?? null;
+  mayarKeyForm.clearErrors('mayar_key_file');
+  if (file && !file.name.toLowerCase().endsWith('.agq')) {
+    mayarKeyFileName.value = '';
+    mayarKeyForm.mayar_key_file = null;
+    mayarKeyForm.setError('mayar_key_file', 'File harus berekstensi .AGQ.');
+    return;
+  }
+  mayarKeyForm.mayar_key_file = file;
+  mayarKeyFileName.value = file?.name ?? '';
+};
+const uploadMayarKey = () => {
+  if (!mayarKeyForm.mayar_key_file || mayarKeyForm.processing) return;
+  mayarKeyForm.post('/admin/settings/mayar-key', {
+    forceFormData: true,
+    preserveScroll: true,
+    onSuccess: () => {
+      mayarKeyForm.reset();
+      mayarKeyFileName.value = '';
+    },
+  });
+};
 </script>
 
 <template>
@@ -119,12 +146,19 @@ const visibleSections = computed(() => sections.value.filter(section => section.
                 <input v-model="form[field.key]" type="checkbox" class="h-5 w-5 rounded border-slate-300 text-emerald-700 focus:ring-emerald-600" />
                 <span class="font-semibold" :class="form[field.key] ? 'text-emerald-700' : 'text-slate-500'">{{ form[field.key] ? 'Aktif' : 'Nonaktif' }}</span>
               </label>
-              <select v-else-if="field.type === 'provider'" v-model="form[field.key]" class="mt-2 w-full rounded-xl border-slate-300 bg-white px-4 py-3 focus:border-emerald-600 focus:ring-emerald-600"><option value="duitku">Duitku</option><option value="tripay">Tripay</option><option value="mayar">Mayar</option><option value="midtrans">Midtrans</option></select>
+              <select v-else-if="field.type === 'provider'" v-model="form[field.key]" class="mt-2 w-full rounded-xl border-slate-300 bg-white px-4 py-3 focus:border-emerald-600 focus:ring-emerald-600"><option value="duitku">Duitku</option><option value="tripay">Tripay</option><option value="mayar_link">Mayar Link</option><option value="mayar">Mayar API</option><option value="midtrans">Midtrans</option></select>
               <select v-else-if="field.type === 'select'" v-model="form[field.key]" class="mt-2 w-full rounded-xl border-slate-300 bg-white px-4 py-3 focus:border-emerald-600 focus:ring-emerald-600"><option value="sandbox">Sandbox</option><option value="production">Production</option></select>
               <select v-else-if="field.type === 'year'" v-model="form[field.key]" class="mt-2 w-full rounded-xl border-slate-300 bg-white px-4 py-3 focus:border-emerald-600 focus:ring-emerald-600"><option v-for="year in Array.from({ length: 11 }, (_, index) => new Date().getFullYear() - 2 + index)" :key="year" :value="year">{{ year }}</option></select>
+              <div v-else-if="field.type === 'mayar-file'" class="mt-2 rounded-xl border border-dashed border-emerald-300 bg-emerald-50/60 p-4">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <input type="file" accept=".agq,.AGQ" class="block min-w-0 flex-1 text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-700 file:px-3 file:py-2 file:font-bold file:text-white hover:file:bg-emerald-600" @change="chooseMayarKeyFile" />
+                  <button type="button" :disabled="mayarKeyForm.processing || !mayarKeyForm.mayar_key_file" class="shrink-0 rounded-lg bg-emerald-800 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50" @click="uploadMayarKey">{{ mayarKeyForm.processing ? 'Mengunggah…' : 'Upload .AGQ' }}</button>
+                </div>
+                <p class="mt-2 text-xs text-slate-500">{{ mayarKeyFileName || 'Belum ada file dipilih.' }}</p>
+              </div>
               <input v-else v-model="form[field.key]" :type="field.type" class="mt-2 w-full rounded-xl border-slate-300 bg-white px-4 py-3 focus:border-emerald-600 focus:ring-emerald-600" autocomplete="off" />
               <small v-if="field.hint" class="mt-2 block text-xs leading-5 text-slate-400">{{ field.hint }}</small>
-              <small v-if="form.errors[field.key]" class="mt-2 block text-xs font-semibold text-red-700">{{ form.errors[field.key] }}</small>
+              <small v-if="form.errors[field.key] || (field.type === 'mayar-file' && mayarKeyForm.errors.mayar_key_file)" class="mt-2 block text-xs font-semibold text-red-700">{{ form.errors[field.key] || mayarKeyForm.errors.mayar_key_file }}</small>
             </label>
           </div>
           <div v-if="section.title === 'Payment Gateway'" class="border-t border-slate-100 bg-blue-50/50 p-6">
@@ -135,7 +169,7 @@ const visibleSections = computed(() => sections.value.filter(section => section.
             <div class="mt-5 grid gap-4">
               <div>
                 <label class="text-xs font-bold uppercase tracking-wider text-slate-500">Callback URL</label>
-                <div class="mt-2 flex gap-2"><input :value="form.payment_provider === 'tripay' ? tripayCallbackUrl : form.payment_provider === 'midtrans' ? midtransCallbackUrl : form.payment_provider === 'mayar' ? mayarCallbackUrl : callbackUrl" readonly class="min-w-0 flex-1 rounded-xl border-blue-200 bg-white px-4 py-3 font-mono text-sm text-slate-700"/><button type="button" class="shrink-0 rounded-xl bg-blue-700 px-4 text-sm font-bold text-white" @click="copyUrl('callback', form.payment_provider === 'tripay' ? tripayCallbackUrl : form.payment_provider === 'midtrans' ? midtransCallbackUrl : form.payment_provider === 'mayar' ? mayarCallbackUrl : callbackUrl)">{{ copied === 'callback' ? 'Tersalin ✓' : 'Salin' }}</button></div>
+                <div class="mt-2 flex gap-2"><input :value="form.payment_provider === 'tripay' ? tripayCallbackUrl : form.payment_provider === 'midtrans' ? midtransCallbackUrl : ['mayar', 'mayar_link'].includes(form.payment_provider) ? mayarCallbackUrl : callbackUrl" readonly class="min-w-0 flex-1 rounded-xl border-blue-200 bg-white px-4 py-3 font-mono text-sm text-slate-700"/><button type="button" class="shrink-0 rounded-xl bg-blue-700 px-4 text-sm font-bold text-white" @click="copyUrl('callback', form.payment_provider === 'tripay' ? tripayCallbackUrl : form.payment_provider === 'midtrans' ? midtransCallbackUrl : ['mayar', 'mayar_link'].includes(form.payment_provider) ? mayarCallbackUrl : callbackUrl)">{{ copied === 'callback' ? 'Tersalin ✓' : 'Salin' }}</button></div>
                 <p class="mt-2 text-xs leading-5 text-slate-500">Digunakan sistem pembayaran untuk mengirim status transaksi secara otomatis.</p>
               </div>
               <div>

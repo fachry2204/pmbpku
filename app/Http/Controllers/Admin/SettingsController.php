@@ -9,6 +9,7 @@ use App\Services\RcloneStorageService;
 use App\Services\SettingsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
@@ -44,6 +45,7 @@ class SettingsController extends Controller
         'midtrans.client_key' => ['string', true],
         'mayar.mode' => ['string', false],
         'mayar.api_key' => ['string', true],
+        'mayar_link.url' => ['string', false],
         'fonnte.base_url' => ['string', false],
         'fonnte.token' => ['string', true],
         'notifications.whatsapp_enabled' => ['boolean', false],
@@ -77,6 +79,7 @@ class SettingsController extends Controller
                 'rclone.remote' => 'gdrive',
                 'rclone.root_folder' => 'PMB-PKU',
                 'payment.provider' => 'duitku',
+                'mayar_link.url' => (string) config('services.mayar_link.url'),
                 'duitku.mode', 'tripay.mode', 'midtrans.mode', 'mayar.mode' => 'sandbox',
                 'notifications.whatsapp_enabled', 'notifications.email_enabled' => true,
                 default => '',
@@ -128,7 +131,7 @@ class SettingsController extends Controller
             'rclone_remote' => ['nullable', 'regex:/^[A-Za-z0-9_-]+$/', 'max:100'],
             'rclone_config_path' => ['nullable', 'string', 'max:500'],
             'rclone_root_folder' => ['nullable', 'string', 'max:200'],
-            'payment_provider' => ['required', 'in:duitku,tripay,midtrans,mayar'],
+            'payment_provider' => ['required', 'in:duitku,tripay,midtrans,mayar,mayar_link'],
             'duitku_mode' => ['nullable', 'in:sandbox,production'],
             'duitku_merchant_code' => ['nullable', 'string', 'max:100'],
             'duitku_api_key' => ['nullable', 'string', 'max:500'],
@@ -140,7 +143,10 @@ class SettingsController extends Controller
             'midtrans_server_key' => ['nullable', 'string', 'max:500'],
             'midtrans_client_key' => ['nullable', 'string', 'max:500'],
             'mayar_mode' => ['nullable', 'in:sandbox,production'],
-            'mayar_api_key' => ['nullable', 'string', 'max:500'],
+            // Mayar keys can be longer than the legacy 500-character limit.
+            // Uploading an AGQ file is preferred, but keep manual recovery possible.
+            'mayar_api_key' => ['nullable', 'string', 'max:10000'],
+            'mayar_link_url' => ['nullable', 'url', 'max:500'],
             'fonnte_base_url' => ['nullable', 'url', 'max:500'],
             'fonnte_token' => ['nullable', 'string', 'max:500'],
             'notifications_whatsapp_enabled' => ['required', 'boolean'],
@@ -174,13 +180,93 @@ class SettingsController extends Controller
         // Jangan memakai daftar channel lama setelah provider, mode, atau
         // credential payment gateway diperbarui dari halaman pengaturan.
         $registrationFee = (int) ($data['pmb_registration_fee'] ?? 250000);
-        foreach (['duitku', 'tripay', 'midtrans', 'mayar'] as $provider) {
+        foreach (['duitku', 'tripay', 'midtrans', 'mayar', 'mayar_link'] as $provider) {
             foreach (['sandbox', 'production'] as $mode) {
                 Cache::forget("payment.channels.{$provider}.{$mode}.{$registrationFee}");
             }
         }
 
         return back()->with('success', 'Pengaturan tersimpan.');
+    }
+
+    public function uploadMayarKey(Request $request, SettingsService $settings): RedirectResponse
+    {
+        $file = $request->file('mayar_key_file');
+        if (! $file || ! $file->isValid()) {
+            throw ValidationException::withMessages([
+                'mayar_key_file' => 'Pilih file API Key Mayar dengan format .AGQ.',
+            ]);
+        }
+
+        if (strtolower($file->getClientOriginalExtension()) !== 'agq') {
+            throw ValidationException::withMessages([
+                'mayar_key_file' => 'File API Key Mayar harus berekstensi .AGQ.',
+            ]);
+        }
+
+        if ($file->getSize() > 64 * 1024) {
+            throw ValidationException::withMessages([
+                'mayar_key_file' => 'Ukuran file .AGQ maksimal 64 KB.',
+            ]);
+        }
+
+        $apiKey = $this->extractMayarApiKey((string) file_get_contents($file->getRealPath()));
+        if ($apiKey === null || mb_strlen($apiKey) > 10000) {
+            throw ValidationException::withMessages([
+                'mayar_key_file' => 'API Key tidak ditemukan atau terlalu panjang di dalam file .AGQ.',
+            ]);
+        }
+
+        $settings->put('mayar', 'mayar.api_key', $apiKey, 'string', true);
+
+        $registrationFee = (int) $settings->get('pmb.registration_fee', 250000);
+        foreach (['sandbox', 'production'] as $mode) {
+            Cache::forget("payment.channels.mayar.{$mode}.{$registrationFee}");
+        }
+
+        return back()->with('success', 'API Key Mayar dari file .AGQ berhasil disimpan.');
+    }
+
+    private function extractMayarApiKey(string $contents): ?string
+    {
+        $contents = trim((string) preg_replace('/^\xEF\xBB\xBF/', '', $contents));
+        if ($contents === '') {
+            return null;
+        }
+
+        // Accept common exports such as MAYAR_API_KEY=..., api_key: ..., or token=....
+        foreach (preg_split('/\R/', $contents) ?: [] as $line) {
+            if (preg_match('/^(?:MAYAR_API_KEY|mayar_api_key|api[_-]?key|apiKey|access[_-]?token|token)\s*[:=]\s*(.+)$/i', trim($line), $match)) {
+                $value = trim($match[1], " \t\\\"'");
+                if ($value !== '') {
+                    return $value;
+                }
+            }
+        }
+
+        $decoded = json_decode($contents, true);
+        if (is_array($decoded)) {
+            $keyNames = ['mayar_api_key', 'apikey', 'api_key', 'access_token', 'token', 'key'];
+            $stack = [$decoded];
+            while ($stack) {
+                $current = array_pop($stack);
+                foreach ($current as $name => $value) {
+                    if (is_string($value) && in_array(strtolower((string) $name), $keyNames, true) && trim($value) !== '') {
+                        return trim($value);
+                    }
+                    if (is_array($value)) {
+                        $stack[] = $value;
+                    }
+                }
+            }
+        }
+
+        // A plain-text AGQ export is treated as the key itself.
+        if (! str_contains($contents, "\n") && ! str_contains($contents, "\r") && ! str_contains($contents, '{')) {
+            return $contents;
+        }
+
+        return null;
     }
 
     public function testEmail(Request $request): RedirectResponse
