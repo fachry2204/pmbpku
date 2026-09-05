@@ -145,7 +145,13 @@ class PaymentController extends Controller
             ->latest('created_at')
             ->first();
         if ($existing) {
-            return redirect()->away($existing->checkout_url);
+            // Regenerate the URL so an older transaction also receives the
+            // current Mayar custom-field mapping (including nomor pendaftaran).
+            $applicant = Applicant::with('admissionPeriod')->where('registration_number', $registrationNumber)->firstOrFail();
+            $remote = $gateway->create($applicant, 'mayar_link', $existing->merchant_ref, (int) $existing->base_amount);
+            $existing->update(['checkout_url' => $remote['paymentUrl']]);
+
+            return redirect()->away($remote['paymentUrl']);
         }
 
         return $this->create($request->merge(['method' => 'mayar_link']), $registrationNumber, $gateway, $settings);

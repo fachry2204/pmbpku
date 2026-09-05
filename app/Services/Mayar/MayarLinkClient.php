@@ -43,6 +43,8 @@ class MayarLinkClient
             'phone' => $applicant->whatsapp_display ?: $applicant->whatsapp_normalized,
             'registration_number' => $applicant->registration_number,
             'nomor_pendaftaran' => $applicant->registration_number,
+            'nomor-pendaftaran' => $applicant->registration_number,
+            'nomorPendaftaran' => $applicant->registration_number,
             // Mayar custom-form versions use different names depending on
             // when the field was created. Unknown parameters are ignored by
             // the checkout page, while these aliases keep older links working.
@@ -57,6 +59,8 @@ class MayarLinkClient
         if ($fieldKey !== '') {
             $queryData[$fieldKey] = $applicant->registration_number;
             $queryData['custom_field['.$fieldKey.']'] = $applicant->registration_number;
+            $queryData['customField['.$fieldKey.']'] = $applicant->registration_number;
+            $queryData['custom_field_'.$fieldKey] = $applicant->registration_number;
         }
         $query = http_build_query($queryData, '', '&', PHP_QUERY_RFC3986);
 
