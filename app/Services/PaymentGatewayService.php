@@ -5,11 +5,12 @@ namespace App\Services;
 use App\Models\Applicant;
 use App\Services\Duitku\DuitkuClient;
 use App\Services\Midtrans\MidtransClient;
+use App\Services\Mayar\MayarClient;
 use App\Services\Tripay\TripayClient;
 
 class PaymentGatewayService
 {
-    public function __construct(private DuitkuClient $duitku, private TripayClient $tripay, private MidtransClient $midtrans, private SettingsService $settings) {}
+    public function __construct(private DuitkuClient $duitku, private TripayClient $tripay, private MidtransClient $midtrans, private MayarClient $mayar, private SettingsService $settings) {}
 
     public function provider(): string
     {
@@ -24,14 +25,14 @@ class PaymentGatewayService
     public function channels(int $amount): array
     {
         return match ($this->provider()) {
-            'tripay' => $this->tripay->channels($amount), 'midtrans' => $this->midtrans->channels($amount), default => $this->duitku->channels($amount)
+            'tripay' => $this->tripay->channels($amount), 'midtrans' => $this->midtrans->channels($amount), 'mayar' => $this->mayar->channels($amount), default => $this->duitku->channels($amount)
         };
     }
 
     public function create(Applicant $applicant, string $method, string $reference, int $amount): array
     {
         return match ($this->provider()) {
-            'tripay' => $this->tripay->create($applicant, $method, $reference, $amount), 'midtrans' => $this->midtrans->create($applicant, $method, $reference, $amount), default => $this->duitku->create($applicant, $method, $reference, $amount)
+            'tripay' => $this->tripay->create($applicant, $method, $reference, $amount), 'midtrans' => $this->midtrans->create($applicant, $method, $reference, $amount), 'mayar' => $this->mayar->create($applicant, $method, $reference, $amount), default => $this->duitku->create($applicant, $method, $reference, $amount)
         };
     }
 }

@@ -4,6 +4,8 @@ Duitku memakai API POP `createInvoice`: sandbox `https://api-sandbox.duitku.com/
 
 Tripay memakai credential sandbox/production server-side. Callback HTTPS adalah `/webhooks/tripay`; signature HMAC SHA-256 dihitung dari raw body dengan private key. UAT wajib menggunakan credential pemilik: ambil channel, buat transaksi, simulasikan PAID dan callback duplikat, expired/failed, timeout, lalu pastikan perubahan hanya sekali.
 
+Mayar memakai Headless API V2 (`/hl/v2`) dengan Bearer API key. Invoice dibuat melalui `/invoices/create`, lalu pengguna diarahkan ke `data.link`. Daftarkan `POST /webhooks/mayar` pada dashboard/API Webhook Mayar untuk event `payment.received`; callback JSON dicocokkan dengan transaction ID, nominal, dan email pendaftar. Mayar mendokumentasikan webhook tanpa signature header, sehingga pencocokan data transaksi dan idempotensi wajib dipertahankan.
+
 Fonnte memakai POST `https://api.fonnte.com/send`, token pada header Authorization, serta target, message, dan countryCode=62. Gmail memakai SMTP TLS port 587 dan Google App Password. Semua secret hanya berada di `.env` atau setting terenkripsi, tidak di Vue/log.
 
 Super admin dapat memasukkan credential di `/admin/settings`. Nilai rahasia ditampilkan masked; kolom kosong atau masked mempertahankan secret lama. Setelah perubahan credential, uji sandbox sebelum mengaktifkan mode production.

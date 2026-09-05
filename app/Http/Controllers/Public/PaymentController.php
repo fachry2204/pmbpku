@@ -36,7 +36,7 @@ class PaymentController extends Controller
         } catch (Throwable $exception) {
             report($exception);
             $message = $exception->getMessage();
-            $error = str_starts_with($message, 'Tripay:')
+            $error = str_starts_with($message, 'Tripay:') || str_starts_with($message, 'Mayar:')
                 ? $message
                 : 'Channel pembayaran sedang tidak tersedia.';
         }
@@ -66,7 +66,7 @@ class PaymentController extends Controller
         } catch (Throwable $exception) {
             report($exception);
             $gatewayMessage = $exception->getMessage();
-            $safeGatewayMessage = preg_match('/^(Duitku|Tripay|Midtrans):\s+[^\r\n]{1,300}$/u', $gatewayMessage)
+            $safeGatewayMessage = preg_match('/^(Duitku|Tripay|Midtrans|Mayar):\s+[^\r\n]{1,300}$/u', $gatewayMessage)
                 ? $gatewayMessage
                 : 'Transaksi pembayaran belum dapat dibuat. Periksa konfigurasi payment gateway atau hubungi panitia.';
             throw ValidationException::withMessages([
@@ -84,7 +84,7 @@ class PaymentController extends Controller
             'status' => 'unpaid', 'checkout_url' => $remote[$isTripay ? 'checkout_url' : 'paymentUrl'] ?? null,
             'instructions_json' => isset($remote[$isTripay ? 'pay_code' : 'vaNumber']) ? ['va_number' => $remote[$isTripay ? 'pay_code' : 'vaNumber']] : null,
             'expires_at' => now()->addDay(),
-            'response_payload_redacted' => array_intersect_key($remote, array_flip(['merchantCode', 'reference', 'paymentUrl', 'checkout_url', 'vaNumber', 'pay_code', 'amount', 'statusCode', 'statusMessage'])),
+            'response_payload_redacted' => array_intersect_key($remote, array_flip(['merchantCode', 'reference', 'paymentUrl', 'checkout_url', 'vaNumber', 'pay_code', 'amount', 'statusCode', 'statusMessage', 'mayar_invoice_id', 'mayar_transaction_id'])),
         ]));
         $applicant->update(['payment_status' => 'pending']);
         if (! $payment->checkout_url) {

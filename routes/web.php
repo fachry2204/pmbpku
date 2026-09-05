@@ -10,6 +10,7 @@ use App\Http\Controllers\Public\StatusLookupController;
 use App\Http\Controllers\SelectionCardController;
 use App\Http\Controllers\Webhooks\DuitkuWebhookController;
 use App\Http\Controllers\Webhooks\MidtransWebhookController;
+use App\Http\Controllers\Webhooks\MayarWebhookController;
 use App\Http\Controllers\Webhooks\TripayWebhookController;
 use App\Services\SettingsService;
 use Illuminate\Support\Facades\Route;
@@ -40,6 +41,7 @@ Route::post('/cek-status/{applicant}/documents/{type}/revision', DocumentRevisio
 Route::post('/webhooks/duitku', DuitkuWebhookController::class)->middleware('throttle:120,1')->name('webhooks.duitku');
 Route::post('/webhooks/tripay', TripayWebhookController::class)->middleware('throttle:120,1')->name('webhooks.tripay');
 Route::post('/webhooks/midtrans', MidtransWebhookController::class)->middleware('throttle:120,1')->name('webhooks.midtrans');
+Route::post('/webhooks/mayar', MayarWebhookController::class)->middleware('throttle:120,1')->name('webhooks.mayar');
 
 Route::middleware(['auth', 'active.admin:admin_pmb'])->group(function () {
     Route::get('/absen', [AttendanceController::class, 'index'])->name('attendance.index');

@@ -16,7 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             \App\Http\Middleware\SecurityHeaders::class,
         ]);
-        $middleware->validateCsrfTokens(except: ['webhooks/duitku']);
+        $middleware->validateCsrfTokens(except: ['webhooks/duitku', 'webhooks/mayar']);
         $middleware->alias(['active.admin' => \App\Http\Middleware\EnsureActiveAdmin::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

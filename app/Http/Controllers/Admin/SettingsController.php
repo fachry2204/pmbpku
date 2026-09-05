@@ -42,6 +42,8 @@ class SettingsController extends Controller
         'midtrans.mode' => ['string', false],
         'midtrans.server_key' => ['string', true],
         'midtrans.client_key' => ['string', true],
+        'mayar.mode' => ['string', false],
+        'mayar.api_key' => ['string', true],
         'fonnte.base_url' => ['string', false],
         'fonnte.token' => ['string', true],
         'notifications.whatsapp_enabled' => ['boolean', false],
@@ -75,7 +77,7 @@ class SettingsController extends Controller
                 'rclone.remote' => 'gdrive',
                 'rclone.root_folder' => 'PMB-PKU',
                 'payment.provider' => 'duitku',
-                'duitku.mode', 'tripay.mode', 'midtrans.mode' => 'sandbox',
+                'duitku.mode', 'tripay.mode', 'midtrans.mode', 'mayar.mode' => 'sandbox',
                 'notifications.whatsapp_enabled', 'notifications.email_enabled' => true,
                 default => '',
             };
@@ -98,6 +100,7 @@ class SettingsController extends Controller
             // still open while a deployment is replacing an older route cache.
             'tripayCallbackUrl' => url('/webhooks/tripay'),
             'midtransCallbackUrl' => url('/webhooks/midtrans'),
+            'mayarCallbackUrl' => url('/webhooks/mayar'),
             'returnUrl' => route('status.index'),
             'unreadableSettings' => $unreadableSettings,
         ]);
@@ -125,7 +128,7 @@ class SettingsController extends Controller
             'rclone_remote' => ['nullable', 'regex:/^[A-Za-z0-9_-]+$/', 'max:100'],
             'rclone_config_path' => ['nullable', 'string', 'max:500'],
             'rclone_root_folder' => ['nullable', 'string', 'max:200'],
-            'payment_provider' => ['required', 'in:duitku,tripay,midtrans'],
+            'payment_provider' => ['required', 'in:duitku,tripay,midtrans,mayar'],
             'duitku_mode' => ['nullable', 'in:sandbox,production'],
             'duitku_merchant_code' => ['nullable', 'string', 'max:100'],
             'duitku_api_key' => ['nullable', 'string', 'max:500'],
@@ -136,6 +139,8 @@ class SettingsController extends Controller
             'midtrans_mode' => ['nullable', 'in:sandbox,production'],
             'midtrans_server_key' => ['nullable', 'string', 'max:500'],
             'midtrans_client_key' => ['nullable', 'string', 'max:500'],
+            'mayar_mode' => ['nullable', 'in:sandbox,production'],
+            'mayar_api_key' => ['nullable', 'string', 'max:500'],
             'fonnte_base_url' => ['nullable', 'url', 'max:500'],
             'fonnte_token' => ['nullable', 'string', 'max:500'],
             'notifications_whatsapp_enabled' => ['required', 'boolean'],
@@ -169,7 +174,7 @@ class SettingsController extends Controller
         // Jangan memakai daftar channel lama setelah provider, mode, atau
         // credential payment gateway diperbarui dari halaman pengaturan.
         $registrationFee = (int) ($data['pmb_registration_fee'] ?? 250000);
-        foreach (['duitku', 'tripay', 'midtrans'] as $provider) {
+        foreach (['duitku', 'tripay', 'midtrans', 'mayar'] as $provider) {
             foreach (['sandbox', 'production'] as $mode) {
                 Cache::forget("payment.channels.{$provider}.{$mode}.{$registrationFee}");
             }

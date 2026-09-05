@@ -52,6 +52,10 @@ return [
         'server_key' => env('MIDTRANS_SERVER_KEY'),
         'client_key' => env('MIDTRANS_CLIENT_KEY'),
     ],
+    'mayar' => [
+        'mode' => env('MAYAR_MODE', 'sandbox'),
+        'api_key' => env('MAYAR_API_KEY'),
+    ],
     'fonnte' => [
         'base_url' => env('FONNTE_BASE_URL', 'https://api.fonnte.com'),
         'token' => env('FONNTE_TOKEN'),
