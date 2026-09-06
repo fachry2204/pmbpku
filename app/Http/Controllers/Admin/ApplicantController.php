@@ -149,7 +149,12 @@ class ApplicantController extends Controller
         abort_unless(in_array($role, $allowedRoles[$data['dimension']], true), 403);
 
         $allowedStatuses = match ($data['dimension']) {
-            'payment' => array_column(PaymentStatus::cases(), 'value'),
+            // "pending" is an internal gateway transaction state. It must not
+            // become an applicant-facing payment status or a manual option.
+            'payment' => array_values(array_filter(
+                array_column(PaymentStatus::cases(), 'value'),
+                fn (string $status) => $status !== PaymentStatus::Pending->value,
+            )),
             'document' => array_column(DocumentStatus::cases(), 'value'),
             'selection' => array_column(SelectionStatus::cases(), 'value'),
         };

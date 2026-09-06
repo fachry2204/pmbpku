@@ -129,6 +129,19 @@ class ApplicantManagementTest extends TestCase
         $this->assertSame('unpaid', $applicant->fresh()->payment_status->value);
     }
 
+    public function test_manual_payment_status_cannot_be_set_to_gateway_pending(): void
+    {
+        $applicant = $this->applicant();
+
+        $this->actingAs($this->admin())->patch("/admin/applicants/{$applicant->id}/status", [
+            'dimension' => 'payment',
+            'status' => 'pending',
+            'reason' => 'Tidak digunakan sebagai status pendaftar.',
+        ])->assertSessionHasErrors('status');
+
+        $this->assertSame('unpaid', $applicant->fresh()->payment_status->value);
+    }
+
     public function test_scheduled_selection_requires_date_and_time(): void
     {
         $applicant = $this->applicant();

@@ -13,7 +13,8 @@ const bulkScheduleEditor = reactive({ open: false, date: '', time: '', error: ''
 const search = () => router.get('/admin/applicants', filters, { preserveState: true, replace: true });
 const statuses: Record<string, { label: string; classes: string }> = {
   unpaid: { label: 'Belum Bayar', classes: 'bg-red-100 text-red-700 ring-red-200' },
-  pending: { label: 'Verifikasi Pembayaran', classes: 'bg-amber-100 text-amber-800 ring-amber-200' },
+  // Data lama yang masih bernilai pending tetap ditampilkan sebagai Belum Bayar.
+  pending: { label: 'Belum Bayar', classes: 'bg-red-100 text-red-700 ring-red-200' },
   paid: { label: 'Lunas', classes: 'bg-emerald-100 text-emerald-700 ring-emerald-200' },
   failed: { label: 'Gagal', classes: 'bg-red-100 text-red-700 ring-red-200' },
   expired: { label: 'Kedaluwarsa', classes: 'bg-slate-200 text-slate-700 ring-slate-300' },
@@ -35,7 +36,7 @@ const statuses: Record<string, { label: string; classes: string }> = {
 };
 const status = (value: string) => statuses[value] || { label: value?.replaceAll('_', ' ') || '-', classes: 'bg-slate-100 text-slate-700 ring-slate-200' };
 const options: Record<string, string[]> = {
-  payment: ['unpaid', 'pending', 'paid', 'failed', 'expired', 'refunded'],
+  payment: ['unpaid', 'paid', 'failed', 'expired', 'refunded'],
   document: ['pending_review', 'complete', 'incomplete', 'revision_submitted'],
   selection: ['not_scheduled', 'scheduled', 'attending_test', 'passed', 'not_passed', 'withdrawn'],
 };
@@ -132,7 +133,7 @@ const savePayment = () => {
       <form class="mt-6 grid gap-3 rounded-2xl bg-white p-4 md:grid-cols-5" @submit.prevent="search">
         <input v-model="filters.search" placeholder="Nama / nomor pendaftaran" class="rounded-xl border-slate-300" />
         <select v-model="filters.registration_year" class="rounded-xl border-slate-300"><option value="">Semua tahun pendaftaran</option><option v-for="year in registrationYears" :key="year" :value="year">Tahun {{ year }}</option></select>
-        <select v-model="filters.payment_status" class="rounded-xl border-slate-300"><option value="">Semua pembayaran</option><option value="unpaid">Belum bayar</option><option value="pending">Menunggu</option><option value="paid">Lunas</option><option value="failed">Gagal</option></select>
+        <select v-model="filters.payment_status" class="rounded-xl border-slate-300"><option value="">Semua pembayaran</option><option value="unpaid">Belum bayar</option><option value="paid">Lunas</option><option value="failed">Gagal</option></select>
         <select v-model="filters.document_status" class="rounded-xl border-slate-300"><option value="">Semua berkas</option><option value="pending_review">Menunggu review</option><option value="complete">Lengkap</option><option value="incomplete">Belum lengkap</option></select>
         <button class="rounded-xl bg-emerald-800 py-3 font-bold text-white">Filter</button>
       </form>

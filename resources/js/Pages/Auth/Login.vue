@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import { computed } from 'vue';
 defineProps<{ canResetPassword?: boolean; status?: string }>();
 const form=useForm({username:'',password:''});
 const submit=()=>form.post(route('login'),{onFinish:()=>form.reset('password')});
+const loginError=computed(()=>{
+  const value=String(form.errors.username || form.errors.password || '');
+  return value === 'auth.failed' ? 'Username atau password yang Anda masukkan salah.' : value;
+});
 </script>
 
 <template>
@@ -31,10 +36,12 @@ const submit=()=>form.post(route('login'),{onFinish:()=>form.reset('password')})
 
             <div v-if="status" class="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800">{{status}}</div>
 
-            <form class="mt-5" @submit.prevent="submit">
-              <label class="block"><span class="text-sm font-extrabold text-slate-700">Username</span><div class="relative mt-2"><span class="pointer-events-none absolute inset-y-0 left-5 grid place-items-center text-slate-400">●</span><input v-model="form.username" id="username" type="text" required autofocus autocomplete="username" placeholder="Masukkan username" class="w-full rounded-2xl border-slate-200 bg-[#eef4fd] py-4 pl-12 pr-5 text-base focus:border-[#087154] focus:ring-[#087154]"/></div><p v-if="form.errors.username" class="mt-2 text-sm font-medium text-red-600">{{form.errors.username}}</p></label>
+            <transition name="error-slide"><div v-if="loginError" class="login-error mt-5" role="alert"><span class="login-error-icon">!</span><div><strong>Login gagal</strong><p>{{ loginError }}</p></div></div></transition>
 
-              <label class="mt-7 block"><span class="text-sm font-extrabold text-slate-700">Password</span><div class="relative mt-2"><span class="pointer-events-none absolute inset-y-0 left-5 grid place-items-center text-slate-400">●</span><input v-model="form.password" id="password" type="password" required autocomplete="current-password" placeholder="Masukkan password" class="w-full rounded-2xl border-slate-200 bg-[#eef4fd] py-4 pl-12 pr-5 text-base focus:border-[#087154] focus:ring-[#087154]"/></div><p v-if="form.errors.password" class="mt-2 text-sm font-medium text-red-600">{{form.errors.password}}</p></label>
+            <form class="mt-5" @submit.prevent="submit">
+              <label class="block"><span class="text-sm font-extrabold text-slate-700">Username</span><div class="relative mt-2"><span class="pointer-events-none absolute inset-y-0 left-5 grid place-items-center text-slate-400">●</span><input v-model="form.username" @input="form.clearErrors()" id="username" type="text" required autofocus autocomplete="username" placeholder="Masukkan username" :class="['w-full rounded-2xl border-slate-200 bg-[#eef4fd] py-4 pl-12 pr-5 text-base focus:border-[#087154] focus:ring-[#087154]', {'input-error': loginError}]"/></div><p v-if="form.errors.username && !loginError" class="mt-2 text-sm font-medium text-red-600">{{form.errors.username}}</p></label>
+
+              <label class="mt-7 block"><span class="text-sm font-extrabold text-slate-700">Password</span><div class="relative mt-2"><span class="pointer-events-none absolute inset-y-0 left-5 grid place-items-center text-slate-400">●</span><input v-model="form.password" @input="form.clearErrors()" id="password" type="password" required autocomplete="current-password" placeholder="Masukkan password" :class="['w-full rounded-2xl border-slate-200 bg-[#eef4fd] py-4 pl-12 pr-5 text-base focus:border-[#087154] focus:ring-[#087154]', {'input-error': loginError}]"/></div><p v-if="form.errors.password && !loginError" class="mt-2 text-sm font-medium text-red-600">{{form.errors.password}}</p></label>
 
               <button type="submit" :disabled="form.processing" class="mt-8 w-full rounded-2xl bg-[#075c3b] py-4 text-lg font-extrabold text-white shadow-xl shadow-emerald-900/20 transition hover:-translate-y-0.5 hover:bg-[#064e3b] disabled:opacity-50">{{form.processing?'Memproses…':'Masuk ke Dashboard'}}</button>
             </form>
@@ -49,6 +56,7 @@ const submit=()=>form.post(route('login'),{onFinish:()=>form.reset('password')})
 
 <style scoped>
 .login-pattern::before{content:"";position:absolute;inset:0;opacity:.13;background-image:url('/images/islamic-geometric-bg.png');background-size:680px auto;pointer-events:none}
+.login-error{display:flex;align-items:flex-start;gap:.7rem;border:1px solid #fecaca;border-radius:.85rem;background:linear-gradient(135deg,#fff1f2,#fff7f7);padding:.75rem .85rem;color:#b42318;box-shadow:0 8px 20px rgba(185,28,28,.08);animation:error-pulse .35s ease-out}.login-error strong{display:block;font-size:.78rem;font-weight:900}.login-error p{margin-top:.15rem;font-size:.7rem;line-height:1.2rem}.login-error-icon{display:grid;height:1.45rem;width:1.45rem;flex:none;place-items:center;border-radius:999px;background:#dc2626;color:white;font-size:.75rem;font-weight:900}.input-error{border-color:#f87171!important;background:#fff7f7!important;box-shadow:0 0 0 3px rgba(248,113,113,.12)!important}.error-slide-enter-active,.error-slide-leave-active{transition:.2s ease}.error-slide-enter-from,.error-slide-leave-to{opacity:0;transform:translateY(-8px)}@keyframes error-pulse{0%{transform:translateY(-5px);opacity:.4}100%{transform:translateY(0);opacity:1}}
 .login-card aside{padding:1.15rem!important}
 .login-card aside>div:first-child{gap:.7rem!important}
 .login-card aside>div:first-child>span{width:2.6rem!important;height:2.6rem!important;font-size:.85rem!important}

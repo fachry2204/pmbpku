@@ -97,7 +97,10 @@ class PaymentController extends Controller
             'expires_at' => now()->addDay(),
             'response_payload_redacted' => array_intersect_key($remote, array_flip(['merchantCode', 'reference', 'paymentUrl', 'checkout_url', 'vaNumber', 'pay_code', 'amount', 'statusCode', 'statusMessage', 'mayar_invoice_id', 'mayar_transaction_id'])),
         ]));
-        $applicant->update(['payment_status' => 'pending']);
+        // Status pendaftar tetap "Belum Bayar" sampai gateway mengirim callback
+        // pembayaran berhasil. Status pending tetap disimpan pada data transaksi
+        // bila diperlukan gateway, tetapi bukan sebagai status pendaftar.
+        $applicant->update(['payment_status' => 'unpaid']);
         if ($provider === 'mayar_link') {
             $request->session()->put('mayar_link_pending_registration', $applicant->registration_number);
         }
@@ -122,7 +125,7 @@ class PaymentController extends Controller
         }
         $applicant = Applicant::where('registration_number', $registrationNumber)->firstOrFail();
         if ($applicant->payment_status->value !== 'paid') {
-            $applicant->update(['payment_status' => 'pending']);
+            $applicant->update(['payment_status' => 'unpaid']);
         }
 
         return Inertia::render('Public/MayarLinkPending', [

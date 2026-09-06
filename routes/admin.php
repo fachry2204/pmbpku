@@ -43,6 +43,7 @@ Route::prefix('admin/users')->middleware(['auth', 'active.admin:super_admin'])->
     Route::get('/', [UserController::class, 'index'])->name('admin.users.index');
     Route::post('/', [UserController::class, 'store'])->name('admin.users.store');
     Route::patch('/{user}', [UserController::class, 'update'])->name('admin.users.update');
+    Route::post('/{user}/reset-password', [UserController::class, 'resetPassword'])->name('admin.users.reset-password');
 });
 Route::get('admin/reports/applicants.csv', [ReportController::class, 'applicants'])->middleware(['auth', 'active.admin:admin_pmb,finance,viewer'])->name('admin.reports.applicants');
 Route::prefix('admin/settings')->middleware(['auth', 'active.admin:super_admin'])->group(function () {
