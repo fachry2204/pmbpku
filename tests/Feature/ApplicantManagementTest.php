@@ -6,6 +6,7 @@ use App\Jobs\SendApplicantNotification;
 use App\Models\AdmissionPeriod;
 use App\Models\Applicant;
 use App\Models\User;
+use App\Services\NotificationTemplateService;
 use App\Services\SettingsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -82,6 +83,48 @@ class ApplicantManagementTest extends TestCase
         );
     }
 
+    public function test_applicant_cards_count_and_filter_each_registration_stage(): void
+    {
+        Queue::fake();
+        $base = $this->applicant();
+        $states = [
+            'not_paid' => ['payment_status' => 'unpaid', 'document_status' => 'pending_review', 'selection_status' => 'not_scheduled'],
+            'paid' => ['payment_status' => 'paid', 'document_status' => 'pending_review', 'selection_status' => 'not_scheduled'],
+            'documents_complete' => ['payment_status' => 'paid', 'document_status' => 'complete', 'selection_status' => 'not_scheduled'],
+            'selection_stage' => ['payment_status' => 'paid', 'document_status' => 'complete', 'selection_status' => 'scheduled'],
+            'selection_passed' => ['payment_status' => 'paid', 'document_status' => 'complete', 'selection_status' => 'passed'],
+        ];
+        $applicants = ['not_paid' => $base];
+
+        $number = 2;
+        foreach (array_slice($states, 1, null, true) as $status => $state) {
+            $applicant = $base->replicate();
+            $applicant->fill([
+                ...$state,
+                'registration_number' => 'PKU-2026-12345'.$number,
+                'submission_uuid' => fake()->uuid(),
+                'email' => "status{$number}@example.test",
+                'whatsapp_normalized' => '62811111111'.$number,
+                'whatsapp_display' => '0811111111'.$number,
+            ])->save();
+            $applicants[$status] = $applicant;
+            $number++;
+        }
+
+        foreach ($states as $status => $state) {
+            $this->actingAs($this->admin())
+                ->get('/admin/applicants?registration_status='.$status)
+                ->assertOk()
+                ->assertInertia(fn (Assert $page) => $page
+                    ->where('filters.registration_status', $status)
+                    ->has('applicants.data', 1)
+                    ->where('applicants.data.0.id', $applicants[$status]->id)
+                    ->where('statusSummary.all', 5)
+                    ->where("statusSummary.{$status}", 1)
+                );
+        }
+    }
+
     public function test_delete_removes_applicant_and_private_files(): void
     {
         Storage::fake('local');
@@ -114,6 +157,62 @@ class ApplicantManagementTest extends TestCase
             'changed_by_id' => $admin->id,
         ]);
         $this->assertDatabaseHas('audit_logs', ['action' => 'applicant.status.manual_update', 'auditable_id' => $applicant->id]);
+    }
+
+    public function test_admin_can_resend_an_informative_notification_for_the_current_status(): void
+    {
+        Queue::fake();
+        $applicant = $this->applicant();
+        $admin = $this->admin();
+
+        $this->actingAs($admin)
+            ->post("/admin/applicants/{$applicant->id}/notifications/current-status")
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('notification_logs', [
+            'applicant_id' => $applicant->id,
+            'event_type' => 'current_status',
+            'channel' => 'email',
+        ]);
+        $this->assertDatabaseHas('notification_logs', [
+            'applicant_id' => $applicant->id,
+            'event_type' => 'current_status',
+            'channel' => 'whatsapp',
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'applicant.notification.manual_resend',
+            'auditable_id' => $applicant->id,
+        ]);
+        Queue::assertPushed(SendApplicantNotification::class, function (SendApplicantNotification $job): bool {
+            return str_contains($job->message, 'Status pendaftaran: Belum Bayar')
+                && str_contains($job->message, 'Pembayaran: Belum dibayar')
+                && str_contains($job->message, 'Silakan selesaikan pembayaran');
+        });
+    }
+
+    public function test_current_status_notification_includes_the_selection_schedule(): void
+    {
+        Queue::fake();
+        $applicant = $this->applicant();
+        $session = $applicant->testSessions()->create([
+            'admission_period_id' => $applicant->admission_period_id,
+            'name' => 'Seleksi Gelombang 1',
+            'starts_at' => now()->addDays(3)->setTime(8, 30),
+            'location' => 'Aula MUI Jakarta',
+        ], ['attendance_status' => 'assigned', 'assigned_at' => now()]);
+        $applicant->update([
+            'payment_status' => 'paid',
+            'document_status' => 'complete',
+            'selection_status' => 'scheduled',
+        ]);
+
+        $message = app(NotificationTemplateService::class)->render('current_status', $applicant->fresh());
+
+        $this->assertStringContainsString('Status pendaftaran: Tahap Seleksi', $message);
+        $this->assertStringContainsString('Seleksi: Dijadwalkan', $message);
+        $this->assertStringContainsString($session->starts_at->format('H:i').' WIB', $message);
+        $this->assertStringContainsString('Aula MUI Jakarta', $message);
     }
 
     public function test_manual_payment_status_requires_a_reason(): void

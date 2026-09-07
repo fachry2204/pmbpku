@@ -24,6 +24,7 @@ final class NotificationTemplateService
         'selection_passed' => 'Selamat {full_name}! Anda dinyatakan DITERIMA pada PMB Pendidikan Kader Ulama. Nomor pendaftaran: {registration_number}. Silakan ikuti arahan lanjutan dari panitia.',
         'selection_not_passed' => 'Terima kasih {full_name} telah mengikuti seluruh proses. Berdasarkan hasil seleksi, pendaftaran {registration_number} belum dinyatakan diterima.',
         'selection_withdrawn' => 'Pendaftaran {registration_number} telah dibatalkan atau mengundurkan diri. Hubungi panitia apabila status ini tidak sesuai.',
+        'current_status' => "Assalamu'alaikum {full_name},\n\nBerikut informasi terbaru pendaftaran {registration_number}:\n- Status pendaftaran: {registration_status_label}\n- Pembayaran: {payment_status_label}\n- Berkas: {document_status_label}\n- Seleksi: {selection_status_label}\n\n{status_guidance}",
     ];
 
     public function __construct(private SettingsService $settings) {}
@@ -41,7 +42,7 @@ final class NotificationTemplateService
             'notifications.'.$event,
             self::DEFAULTS[$event] ?? $fallback ?? "Assalamu'alaikum {full_name},\n\nTerdapat pembaruan status PMB untuk {registration_number}. Silakan cek status pendaftaran Anda."
         );
-        $session = $event === 'selection_scheduled'
+        $session = in_array($event, ['selection_scheduled', 'current_status'], true)
             ? $applicant->testSessions()->latest('starts_at')->first()
             : null;
         $date = $session?->starts_at?->locale('id')->translatedFormat('l, d F Y') ?? '-';
@@ -60,6 +61,8 @@ final class NotificationTemplateService
             '{payment_status_label}' => $this->label($applicant->payment_status->value),
             '{document_status_label}' => $this->label($applicant->document_status->value),
             '{selection_status_label}' => $this->label($applicant->selection_status->value),
+            '{registration_status_label}' => $applicant->registration_status['label'],
+            '{status_guidance}' => $this->statusGuidance($applicant, $date, $time, $location),
             '{selection_date}' => $date,
             '{selection_time}' => $time,
             '{selection_location}' => $location,
@@ -70,6 +73,38 @@ final class NotificationTemplateService
         }
 
         return $message;
+    }
+
+    private function statusGuidance(Applicant $applicant, string $date, string $time, string $location): string
+    {
+        $payment = $applicant->payment_status->value;
+        if ($payment !== 'paid') {
+            return match ($payment) {
+                'pending' => 'Pembayaran sedang menunggu konfirmasi admin. Anda tidak perlu melakukan pembayaran ulang dan akan menerima informasi setelah verifikasi selesai.',
+                'failed' => 'Pembayaran sebelumnya tidak berhasil. Silakan lakukan pembayaran kembali atau hubungi panitia apabila dana telah terpotong.',
+                'expired' => 'Masa berlaku pembayaran telah berakhir. Silakan membuat transaksi pembayaran baru melalui halaman cek status.',
+                'refunded' => 'Dana pembayaran telah dikembalikan. Silakan hubungi panitia untuk arahan selanjutnya.',
+                default => 'Silakan selesaikan pembayaran melalui halaman cek status agar proses pendaftaran dapat dilanjutkan.',
+            };
+        }
+
+        $document = $applicant->document_status->value;
+        if ($document !== 'complete') {
+            return match ($document) {
+                'incomplete' => 'Berkas masih memerlukan perbaikan. Silakan buka halaman cek status, baca catatan panitia, lalu unggah dokumen yang sesuai.',
+                'revision_submitted' => 'Perbaikan dokumen telah diterima dan sedang diperiksa kembali oleh panitia.',
+                default => 'Pembayaran telah diterima. Dokumen Anda sedang menunggu pemeriksaan panitia.',
+            };
+        }
+
+        return match ($applicant->selection_status->value) {
+            'scheduled' => "Seleksi telah dijadwalkan pada {$date}, pukul {$time} WIB di {$location}. Silakan cek status untuk mengunduh kartu peserta dan melihat informasi lengkap.",
+            'attending_test' => 'Kehadiran seleksi telah tercatat. Silakan menunggu informasi hasil seleksi dari panitia.',
+            'passed' => 'Selamat, Anda dinyatakan diterima. Silakan mengikuti arahan lanjutan yang disampaikan oleh panitia.',
+            'not_passed' => 'Terima kasih telah mengikuti seluruh proses. Berdasarkan hasil seleksi, Anda belum dinyatakan diterima.',
+            'withdrawn' => 'Pendaftaran tercatat dibatalkan atau mengundurkan diri. Hubungi panitia apabila status ini tidak sesuai.',
+            default => 'Pembayaran dan berkas telah lengkap. Silakan menunggu jadwal seleksi dari panitia.',
+        };
     }
 
     private function label(string $value): string

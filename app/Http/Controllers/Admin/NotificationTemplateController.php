@@ -14,7 +14,7 @@ class NotificationTemplateController extends Controller
 {
     public function edit(NotificationTemplateService $t): Response
     {
-        return Inertia::render('Admin/Settings/Notifications', ['templates' => $t->all(), 'variables' => ['{registration_number}', '{full_name}', '{payment_status}', '{document_status}', '{selection_status}', '{selection_date}', '{selection_time}', '{selection_location}']]);
+        return Inertia::render('Admin/Settings/Notifications', ['templates' => $t->all(), 'variables' => ['{registration_number}', '{full_name}', '{registration_status_label}', '{payment_status}', '{payment_status_label}', '{document_status}', '{document_status_label}', '{selection_status}', '{selection_status_label}', '{status_guidance}', '{selection_date}', '{selection_time}', '{selection_location}']]);
     }
 
     public function update(Request $r, SettingsService $s, NotificationTemplateService $t): RedirectResponse

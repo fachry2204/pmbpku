@@ -16,10 +16,11 @@ final class QueueApplicantNotification
         private SettingsService $settings
     ) {}
 
-    public function execute(Applicant $applicant, string $event, string $fallback = '', ?string $occurrence = null): void
+    public function execute(Applicant $applicant, string $event, string $fallback = '', ?string $occurrence = null): int
     {
         $message = $this->templates->render($event, $applicant, $fallback);
         $occurrence ??= $event;
+        $processedChannels = 0;
 
         foreach (['email', 'whatsapp'] as $channel) {
             if (! $this->settings->get('notifications.'.$channel.'_enabled', true)) {
@@ -42,7 +43,10 @@ final class QueueApplicantNotification
             // Diproses langsung agar notifikasi tetap terkirim di Plesk tanpa queue worker.
             if ($log->wasRecentlyCreated) {
                 SendApplicantNotification::dispatchSync($log->id, $message);
+                $processedChannels++;
             }
         }
+
+        return $processedChannels;
     }
 }

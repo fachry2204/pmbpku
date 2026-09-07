@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\QueueApplicantNotification;
 use App\Enums\DocumentStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\SelectionStatus;
@@ -12,6 +13,7 @@ use App\Models\TestSession;
 use App\Services\RcloneStorageService;
 use App\Services\SettingsService;
 use App\Support\IndonesianPhone;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -23,6 +25,7 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Throwable;
 use ZipArchive;
 
 class ApplicantController extends Controller
@@ -40,12 +43,52 @@ class ApplicantController extends Controller
         if ($request->filled('registration_year')) {
             $query->whereHas('admissionPeriod', fn ($period) => $period->where('year', $request->integer('registration_year')));
         }
+        $statusSummary = $this->registrationStatusSummary(clone $query);
+        if ($request->filled('registration_status')) {
+            $this->applyRegistrationStatusFilter($query, $request->string('registration_status')->toString());
+        }
 
         return Inertia::render('Admin/Applicants/Index', [
             'applicants' => $query->latest()->paginate(20)->withQueryString(),
-            'filters' => $request->only(['search', 'payment_status', 'document_status', 'selection_status', 'registration_year']),
+            'filters' => $request->only(['search', 'payment_status', 'document_status', 'selection_status', 'registration_year', 'registration_status']),
             'registrationYears' => AdmissionPeriod::query()->distinct()->orderByDesc('year')->pluck('year'),
+            'statusSummary' => $statusSummary,
         ]);
+    }
+
+    private function registrationStatusSummary(Builder $base): array
+    {
+        $summary = ['all' => (clone $base)->count()];
+
+        foreach (['not_paid', 'paid', 'documents_complete', 'selection_stage', 'selection_passed'] as $status) {
+            $query = clone $base;
+            $this->applyRegistrationStatusFilter($query, $status);
+            $summary[$status] = $query->count();
+        }
+
+        return $summary;
+    }
+
+    private function applyRegistrationStatusFilter(Builder $query, string $status): void
+    {
+        match ($status) {
+            'selection_passed' => $query->where('selection_status', SelectionStatus::Passed->value),
+            'selection_stage' => $query
+                ->where('selection_status', '!=', SelectionStatus::NotScheduled->value)
+                ->where('selection_status', '!=', SelectionStatus::Passed->value),
+            'documents_complete' => $query
+                ->where('selection_status', SelectionStatus::NotScheduled->value)
+                ->where('document_status', DocumentStatus::Complete->value),
+            'paid' => $query
+                ->where('selection_status', SelectionStatus::NotScheduled->value)
+                ->where('document_status', '!=', DocumentStatus::Complete->value)
+                ->where('payment_status', PaymentStatus::Paid->value),
+            'not_paid' => $query
+                ->where('selection_status', SelectionStatus::NotScheduled->value)
+                ->where('document_status', '!=', DocumentStatus::Complete->value)
+                ->where('payment_status', '!=', PaymentStatus::Paid->value),
+            default => null,
+        };
     }
 
     public function show(Applicant $applicant, SettingsService $settings): Response
@@ -113,7 +156,7 @@ class ApplicantController extends Controller
                     'ip' => $request->ip(), 'user_agent' => str($request->userAgent())->limit(500), 'created_at' => now(),
                 ]);
             });
-        } catch (\Throwable $exception) {
+        } catch (Throwable $exception) {
             Storage::disk('local')->delete($path);
             throw $exception;
         }
@@ -121,7 +164,7 @@ class ApplicantController extends Controller
         if ($old) {
             try {
                 $old->disk === 'rclone' ? $drive->delete($old->path) : Storage::disk($old->disk)->delete($old->path);
-            } catch (\Throwable $exception) {
+            } catch (Throwable $exception) {
                 report($exception);
             }
         }
@@ -228,6 +271,45 @@ class ApplicantController extends Controller
         });
 
         return back()->with('success', 'Status '.$data['dimension'].' berhasil diperbarui.');
+    }
+
+    public function sendCurrentStatusNotification(
+        Request $request,
+        Applicant $applicant,
+        QueueApplicantNotification $notifications
+    ): RedirectResponse {
+        try {
+            $channels = $notifications->execute(
+                $applicant->fresh(),
+                'current_status',
+                occurrence: 'manual-'.$request->user()->id.'-'.Str::uuid()
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->with('error', 'Notifikasi belum berhasil dikirim. Periksa konfigurasi dan halaman Pesan Terkirim untuk detail error.');
+        }
+
+        if ($channels === 0) {
+            return back()->with('error', 'Tidak ada kanal notifikasi yang aktif. Aktifkan email atau WhatsApp di Pengaturan terlebih dahulu.');
+        }
+
+        DB::table('audit_logs')->insert([
+            'user_id' => $request->user()->id,
+            'action' => 'applicant.notification.manual_resend',
+            'auditable_type' => Applicant::class,
+            'auditable_id' => $applicant->id,
+            'before_json' => null,
+            'after_json' => json_encode(['event' => 'current_status', 'channels_processed' => $channels]),
+            'ip' => $request->ip(),
+            'user_agent' => str($request->userAgent())->limit(500),
+            'created_at' => now(),
+        ]);
+
+        return back()->with(
+            'success',
+            "Notifikasi status {$applicant->registration_number} diproses melalui {$channels} kanal aktif."
+        );
     }
 
     public function bulkSchedule(Request $request, SettingsService $settings): RedirectResponse
@@ -347,7 +429,7 @@ class ApplicantController extends Controller
                         $extension = $document->extension ?: pathinfo($document->path, PATHINFO_EXTENSION);
                         $filename = $document->type.'-'.$document->id.($extension ? '.'.$extension : '');
                         $drive->delete($drive->destination($applicant->registration_number, $filename));
-                    } catch (\Throwable $exception) {
+                    } catch (Throwable $exception) {
                         report($exception);
                     }
                 }

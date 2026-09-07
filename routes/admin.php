@@ -24,6 +24,9 @@ Route::prefix('admin')->middleware(['auth', 'active.admin:admin_pmb,finance,revi
     Route::get('/applicants/{applicant}/download', [ApplicantController::class, 'download'])->name('admin.applicants.download');
     Route::get('/applicants/{applicant}/selection-card', [SelectionCardController::class, 'adminDownload'])->name('admin.applicants.selection-card');
     Route::patch('/applicants/{applicant}/status', [ApplicantController::class, 'updateStatus'])->name('admin.applicants.status');
+    Route::post('/applicants/{applicant}/notifications/current-status', [ApplicantController::class, 'sendCurrentStatusNotification'])
+        ->middleware('active.admin:admin_pmb,finance')
+        ->name('admin.applicants.notifications.current-status');
     Route::get('/documents/{document}/download', PrivateDocumentController::class)->name('admin.documents.download')->middleware('active.admin:admin_pmb,reviewer');
     Route::patch('/applicants/{applicant}/documents/{document}', [DocumentReviewController::class, 'update'])->name('admin.documents.review')->middleware('active.admin:admin_pmb,reviewer');
     Route::middleware('active.admin:admin_pmb')->group(function () {
