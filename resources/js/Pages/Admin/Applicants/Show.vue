@@ -17,7 +17,7 @@ const statuses: Record<string, [string, string, string]> = {
   not_scheduled:['Belum Dijadwalkan','bg-slate-50 text-slate-700 ring-slate-200','bg-slate-400'], scheduled:['Dijadwalkan','bg-blue-50 text-blue-700 ring-blue-200','bg-blue-500'], passed:['Diterima','bg-emerald-50 text-emerald-700 ring-emerald-200','bg-emerald-500'], not_passed:['Tidak Diterima','bg-rose-50 text-rose-700 ring-rose-200','bg-rose-500'],
 };
 const badge = (value: string) => statuses[value] || [value?.replaceAll('_',' ') || '-', 'bg-slate-50 text-slate-700 ring-slate-200', 'bg-slate-400'];
-const documentNames: Record<string,string> = { recommendation_letter:'Surat Rekomendasi', diploma:'Ijazah', photo_4x6:'Foto 4×6', identity_card:'KTP', pddikti_screenshot:'Screenshot PDDIKTI', payment_proof:'Bukti Pembayaran' };
+const documentNames: Record<string,string> = { recommendation_letter:'Surat Rekomendasi', diploma:'Ijazah', photo_4x6:'Foto 4×6', identity_card:'KTP', pddikti_screenshot:'Screenshot PDDIKTI / Penyetaraan', payment_proof:'Bukti Pembayaran' };
 const stage = computed(() => {
   if (props.applicant.selection_status === 'passed') return 5;
   if (props.applicant.selection_status === 'scheduled') return 4;
@@ -39,7 +39,7 @@ const statusDescription = computed(() => ({
 <template>
   <Head :title="applicant.registration_number" />
   <main class="applicant-detail-page min-h-screen px-4 py-6 sm:px-6 lg:px-8 lg:py-9">
-    <section class="relative z-10 mx-auto max-w-[1120px] space-y-4">
+    <section class="relative z-10 mx-auto max-w-[1380px] space-y-4">
       <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <Link href="/admin/applicants" class="group inline-flex w-fit items-center gap-2 text-sm font-bold text-white/90 transition hover:text-white"><span class="grid h-10 w-10 place-items-center rounded-xl border border-white/25 bg-white/10 transition group-hover:-translate-x-1 group-hover:bg-white/20">←</span>Kembali ke Data Pendaftar</Link>
         <div class="flex flex-wrap gap-2">
@@ -61,14 +61,14 @@ const statusDescription = computed(() => ({
           <div class="grid grid-cols-5"><div v-for="(item, index) in stageItems" :key="item" class="relative flex min-w-0 flex-col items-center text-center"><div v-if="index < 4" class="absolute left-1/2 right-[-50%] top-4 h-px" :class="stage > index + 1 ? 'bg-emerald-700' : 'border-t border-dashed border-slate-300'"></div><span class="relative z-10 grid h-8 w-8 place-items-center rounded-full text-xs font-black ring-4 ring-white" :class="stage >= index + 1 ? 'bg-emerald-700 text-white' : 'bg-slate-100 text-slate-500 ring-1 ring-inset ring-slate-200'">{{ index + 1 }}</span><b class="mt-3 text-[10px] leading-4 sm:text-xs" :class="stage >= index + 1 ? 'text-emerald-800' : 'text-slate-500'">{{ item }}</b><small v-if="stage === index + 1" class="mt-0.5 hidden text-[10px] text-slate-400 sm:block">Tahap saat ini</small></div></div>
         </div>
 
-        <div class="grid gap-4 p-5 sm:p-7 lg:grid-cols-2">
+        <div class="grid gap-4 p-5 sm:p-7 lg:grid-cols-[minmax(0,2fr)_minmax(340px,1fr)]">
           <section class="detail-panel lg:col-span-2"><h2 class="panel-title"><span class="panel-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>Data Calon Mahasiswa</h2><dl class="mt-2 grid gap-x-7 md:grid-cols-2"><div class="data-row"><dt>Nama Lengkap</dt><dd>{{ applicant.full_name }}</dd></div><div class="data-row"><dt>Tempat, Tanggal Lahir</dt><dd>{{ applicant.birth_place }}, {{ formatDate(applicant.birth_date) }}</dd></div><div class="data-row"><dt>Email</dt><dd><a :href="`mailto:${applicant.email}`">{{ applicant.email }}</a></dd></div><div class="data-row"><dt>Nomor WhatsApp</dt><dd><a :href="`https://wa.me/${applicant.whatsapp_normalized}`" target="_blank">{{ applicant.whatsapp_display }}</a></dd></div><div class="data-row md:col-span-2"><dt>Alamat</dt><dd class="whitespace-pre-line">{{ applicant.address }}</dd></div></dl></section>
 
           <section class="detail-panel">
             <div class="flex items-center justify-between"><h2 class="panel-title"><span class="panel-icon"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM15 3v5h5M9 12h6M9 16h5"/></svg></span>Dokumen Pendaftaran</h2><span class="text-xs font-bold text-emerald-700">{{ applicant.documents.length }} file</span></div>
             <div v-if="applicant.documents.length" class="mt-3 divide-y divide-slate-200/80">
               <div v-for="d in applicant.documents" :key="d.id" class="document-row">
-                <div class="min-w-0"><p class="truncate text-sm font-bold text-slate-700">{{ documentNames[d.type] || d.type }}</p><span class="mt-1 inline-flex rounded-md px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset" :class="badge(d.verification_status)[1]">{{ badge(d.verification_status)[0] }}</span></div>
+                <div class="min-w-0 sm:max-w-[300px]"><p class="text-sm font-bold leading-5 text-slate-700">{{ documentNames[d.type] || d.type }}</p><span class="mt-1 inline-flex rounded-md px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset" :class="badge(d.verification_status)[1]">{{ badge(d.verification_status)[0] }}</span></div>
                 <div class="grid w-full shrink-0 grid-cols-2 gap-1.5 sm:flex sm:w-auto sm:flex-wrap sm:justify-end">
                   <button type="button" class="mini-btn text-sky-700" :aria-label="`Lihat ${documentNames[d.type] || d.type}`" @click="selectedDocument = d"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg><span>Lihat</span></button>
                   <a :href="`/admin/documents/${d.id}/download`" class="mini-btn text-slate-700" :aria-label="`Unduh ${documentNames[d.type] || d.type}`"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 20h14" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Unduh</span></a>

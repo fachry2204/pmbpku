@@ -6,7 +6,7 @@ const props = defineProps<{ applicant: any }>();
 const documentsOpen = ref(true);
 const selectedDocument = ref<any | null>(null);
 const statusLabels: Record<string, string> = { unpaid:'Belum Bayar',pending:'Belum Bayar',paid:'Sudah Bayar',expired:'Kedaluwarsa',failed:'Gagal',refunded:'Dikembalikan',pending_review:'Menunggu Review',complete:'Berkas Lengkap',incomplete:'Belum Lengkap',revision_submitted:'Revisi Dikirim',not_scheduled:'Belum Dijadwalkan',scheduled:'Terjadwal',attending_test:'Tahap Seleksi',passed:'Lulus Seleksi',not_passed:'Belum Lulus',withdrawn:'Dibatalkan',approved:'Disetujui',rejected:'Ditolak',revision_required:'Perlu Revisi' };
-const documentLabels: Record<string, string> = { recommendation_letter:'Surat Rekomendasi',diploma:'Ijazah',photo_4x6:'Pas Foto 4×6',identity_card:'Kartu Tanda Penduduk (KTP)',pddikti_screenshot:'Screenshot PDDIKTI',payment_proof:'Bukti Pembayaran' };
+const documentLabels: Record<string, string> = { recommendation_letter:'Surat Rekomendasi',diploma:'Ijazah',photo_4x6:'Pas Foto 4×6',identity_card:'Kartu Tanda Penduduk (KTP)',pddikti_screenshot:'Screenshot PDDIKTI / Penyetaraan',payment_proof:'Bukti Pembayaran' };
 const label=(value:string)=>statusLabels[value]||value.replaceAll('_',' ').replace(/\b\w/g,char=>char.toUpperCase());
 const documentStatusLabel=(value:string)=>({pending:'Menunggu Verifikasi',revision_submitted:'Menunggu Verifikasi',valid:'Terverifikasi',revision_required:'Perlu Revisi',rejected:'Ditolak'} as Record<string,string>)[value]||label(value);
 const steps=['Belum Bayar','Sudah Bayar','Berkas Lengkap','Tahap Seleksi','Lulus Seleksi'];

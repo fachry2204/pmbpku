@@ -5,7 +5,7 @@ const step=ref(1);
 const restored=ref(false);
 const DRAFT_KEY='pmb-registration-draft-v1';
 const form=useForm({submission_uuid:crypto.randomUUID() as string,full_name:'',birth_place:'',birth_date:'',address:'',whatsapp:'',email:'',consent:false,recommendation_letter:null as File|null,diploma:null as File|null,photo_4x6:null as File|null,identity_card:null as File|null,pddikti_screenshot:null as File|null});
-const docs=[['recommendation_letter','Surat rekomendasi','Surat rekomendasi atau keterangan resmi'],['diploma','Ijazah','Ijazah S1/sederajat/Pondok Pesantren'],['photo_4x6','Foto 4×6','JPG atau PNG lebih disarankan'],['identity_card','KTP','Kartu Tanda Penduduk yang jelas'],['pddikti_screenshot','Screenshot PDDIKTI','Tangkapan layar data PDDIKTI']] as const;
+const docs=[['recommendation_letter','Surat rekomendasi','Surat rekomendasi atau keterangan resmi'],['diploma','Ijazah','Ijazah S1/sederajat/Pondok Pesantren'],['photo_4x6','Foto 4×6','JPG atau PNG lebih disarankan'],['identity_card','KTP','Kartu Tanda Penduduk yang jelas'],['pddikti_screenshot','Screenshot PDDIKTI / Penyetaraan','Tangkapan layar data PDDIKTI atau dokumen penyetaraan']] as const;
 const dataReady=computed(()=>form.full_name.length>=3&&form.birth_place.length>=2&&!!form.birth_date&&!!form.address&&!!form.whatsapp&&!!form.email);
 const docsReady=computed(()=>docs.every(([key])=>!!form[key]));
 const stepLabels=computed(()=>props.documentUploadEnabled?['Data Diri','Dokumen']:['Data Diri']);

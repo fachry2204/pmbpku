@@ -9,7 +9,7 @@ const databaseDate = (value: string) => { const m = value.match(/^(\d{2})\/(\d{2
 const form = useForm({ full_name: props.applicant.full_name, birth_place: props.applicant.birth_place, birth_date: displayDate(props.applicant.birth_date), address: props.applicant.address, email: props.applicant.email, whatsapp: props.applicant.whatsapp_display });
 const maskDate = (event: Event) => { const input = event.target as HTMLInputElement; const digits = input.value.replace(/\D/g, '').slice(0, 8); input.value = digits.length > 4 ? `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}` : digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits; form.birth_date = input.value; };
 const submit = () => form.transform(data => ({ ...data, birth_date: databaseDate(data.birth_date) })).put(`/admin/applicants/${props.applicant.id}`);
-const documentTypes = [['recommendation_letter', 'Surat Rekomendasi'], ['diploma', 'Ijazah'], ['photo_4x6', 'Pas Foto 4×6'], ['identity_card', 'KTP'], ['pddikti_screenshot', 'Screenshot PDDIKTI']] as const;
+const documentTypes = [['recommendation_letter', 'Surat Rekomendasi'], ['diploma', 'Ijazah'], ['photo_4x6', 'Pas Foto 4×6'], ['identity_card', 'KTP'], ['pddikti_screenshot', 'Screenshot PDDIKTI / Penyetaraan']] as const;
 const selectedFiles = reactive<Record<string, File | null>>({});
 const uploading = ref('');
 const uploadError = ref('');
