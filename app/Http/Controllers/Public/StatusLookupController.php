@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Public;
 use App\Models\AdmissionPeriod;
 use App\Models\Applicant;
 use App\Models\ApplicantDocument;
+use App\Services\RcloneStorageService;
 use App\Services\SettingsService;
 use App\Support\IndonesianPhone;
 use Illuminate\Http\RedirectResponse;
@@ -13,7 +14,9 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as HttpResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 class StatusLookupController
 {
@@ -79,7 +82,7 @@ class StatusLookupController
         $id = $request->session()->get('status_applicant_id');
         abort_unless($id, 403);
         $applicant = Applicant::with([
-            'documents:id,applicant_id,type,original_name,verification_status,review_note,created_at,disk',
+            'documents:id,applicant_id,type,original_name,mime_type,extension,verification_status,review_note,created_at,disk',
             'payments:id,applicant_id,status,checkout_url,base_amount,fee_customer,total_amount,expires_at,created_at',
             'testSessions' => fn ($query) => $query->latest('starts_at'),
         ])->findOrFail($id);
@@ -112,7 +115,11 @@ class StatusLookupController
                 ? route('status.registration-proof')
                 : null,
             'documents' => $applicant->documents->map(fn ($document) => array_merge($document->toArray(), [
-                'view_url' => $document->disk === 'local' ? route('status.document-view', $document) : null,
+                // Keep the private document behind the status-session route.
+                // Files can be in local storage before sync or in rclone after sync.
+                'view_url' => in_array($document->disk, ['local', 'rclone'], true)
+                    ? route('status.document-view', $document)
+                    : null,
             ]))->values(),
             'payments' => $applicant->payments,
             // Mayar Link tidak membutuhkan halaman pemilihan metode. Tandai
@@ -125,14 +132,31 @@ class StatusLookupController
         ]]);
     }
 
-    public function documentView(Request $request, ApplicantDocument $document): StreamedResponse
+    public function documentView(Request $request, ApplicantDocument $document, RcloneStorageService $drive): HttpResponse
     {
         $id = $request->session()->get('status_applicant_id');
         abort_unless($id && (string) $document->applicant_id === (string) $id, 403);
-        abort_unless($document->disk === 'local' && Storage::disk('local')->exists($document->path), 404);
-
-        $disk = Storage::disk('local');
         $filename = preg_replace('/[\x00-\x1F\x7F"]+/u', '_', basename($document->original_name ?: 'dokumen')) ?: 'dokumen';
+        $filename = str_replace('\\', '_', $filename);
+
+        if ($document->disk === 'rclone') {
+            try {
+                $temporary = $drive->downloadToTemporaryFile($document->path);
+            } catch (Throwable $exception) {
+                report($exception);
+                abort(503, 'Dokumen sementara tidak dapat diakses. Silakan coba lagi beberapa saat lagi.');
+            }
+
+            return response()->file($temporary, [
+                'Content-Type' => $document->mime_type ?: 'application/octet-stream',
+                'Content-Disposition' => 'inline; filename="'.$filename.'"',
+                'Cache-Control' => 'private, no-store, max-age=0',
+                'X-Content-Type-Options' => 'nosniff',
+            ])->deleteFileAfterSend(true);
+        }
+
+        $disk = Storage::disk($document->disk ?: 'local');
+        abort_unless($disk->exists($document->path), 404, 'File dokumen tidak ditemukan di penyimpanan server.');
         $mime = $document->mime_type ?: $disk->mimeType($document->path) ?: 'application/octet-stream';
 
         return response()->stream(function () use ($disk, $document): void {
