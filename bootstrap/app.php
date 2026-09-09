@@ -3,6 +3,8 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\PostTooLargeException;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -20,5 +22,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias(['active.admin' => \App\Http\Middleware\EnsureActiveAdmin::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (PostTooLargeException $exception, Request $request) {
+            if ($request->is('pendaftaran')) {
+                return redirect()->route('registration.create', ['upload_error' => 'too_large']);
+            }
+        });
     })->create();

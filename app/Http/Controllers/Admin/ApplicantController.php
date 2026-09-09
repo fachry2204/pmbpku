@@ -443,7 +443,7 @@ class ApplicantController extends Controller
             $applicant->forceDelete();
         });
 
-        return redirect()->route('admin.applicants.index')->with('success', 'Pendaftar dan seluruh dokumennya telah dihapus permanen.');
+        return redirect()->route('admin.applicants.index')->with('success', 'Pendaftar dan seluruh dokumennya telah dihapus permanen. Nomor pendaftaran tetap dicadangkan dan tidak akan dipakai kembali.');
     }
 
     private function canDownloadSelectionCard(Applicant $applicant, ?TestSession $session): bool
