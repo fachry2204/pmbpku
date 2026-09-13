@@ -12,6 +12,14 @@ const selectionEditor = reactive({ applicantId: '', applicantName: '', status: '
 const selectedApplicants = ref<string[]>([]);
 const bulkScheduleEditor = reactive({ open: false, date: '', time: '', error: '' });
 const search = () => router.get('/admin/applicants', filters, { preserveState: true, replace: true });
+const goToPage = (url: string | null) => {
+  if (!url) return;
+  selectedApplicants.value = [];
+  router.visit(url, { preserveScroll: true });
+};
+const paginationLabel = (label: string) => label
+  .replace('&laquo; Previous', '← Sebelumnya')
+  .replace('Next &raquo;', 'Berikutnya →');
 const statusCards = computed(() => [
   { key: '', label: 'Semua Pendaftar', count: props.statusSummary.all ?? 0, description: 'Seluruh data masuk', icon: 'M8 7a4 4 0 1 0 8 0 4 4 0 0 0-8 0M4 21a8 8 0 0 1 16 0', tone: 'slate' },
   { key: 'not_paid', label: 'Belum Bayar', count: props.statusSummary.not_paid ?? 0, description: 'Menunggu pembayaran', icon: 'M3 7h18v12H3zM3 10h18M7 15h3', tone: 'red' },
@@ -192,8 +200,8 @@ const savePayment = () => {
         <div class="mt-4 flex justify-end gap-3"><button type="button" class="rounded-xl border border-slate-300 px-4 py-2 font-bold text-slate-600" @click="closeBulkSchedule">Batal</button><button type="button" :disabled="saving === 'bulk-schedule'" class="rounded-xl bg-blue-700 px-5 py-2 font-bold text-white hover:bg-blue-600 disabled:opacity-50" @click="saveBulkSchedule">{{ saving === 'bulk-schedule' ? 'Memproses…' : 'Jadwalkan Seleksi' }}</button></div>
       </div>
       <div class="mt-5 overflow-x-auto rounded-2xl bg-white shadow-sm">
-        <table class="w-full min-w-[1120px] text-left text-sm">
-          <thead class="bg-emerald-950 text-white"><tr><th class="p-4 text-white">Nomor</th><th class="p-4 text-white"><label class="flex cursor-pointer items-center gap-2 text-white"><input type="checkbox" :checked="allSelectableChecked" class="rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500" aria-label="Pilih semua pendaftar yang dapat dijadwalkan" @change="toggleAllApplicants" /> <span class="text-white">Nama</span></label></th><th class="p-4 text-white">Status Pendaftaran</th><th class="p-4 text-white">Pembayaran</th><th class="p-4 text-white">Berkas</th><th class="p-4 text-white">Seleksi</th><th class="p-4 text-right text-white">Aksi</th></tr></thead>
+        <table class="w-full min-w-[1200px] text-left text-sm">
+          <thead class="bg-emerald-950 text-white"><tr><th class="p-4 text-white">Nomor</th><th class="p-4 text-white"><label class="flex cursor-pointer items-center gap-2 text-white"><input type="checkbox" :checked="allSelectableChecked" class="rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500" aria-label="Pilih semua pendaftar yang dapat dijadwalkan" @change="toggleAllApplicants" /> <span class="text-white">Nama</span></label></th><th class="p-4 text-white">Status Pendaftaran</th><th class="p-4 text-white">Pembayaran</th><th class="p-4 text-white">Berkas</th><th class="p-4 text-white">Seleksi</th><th class="w-[160px] p-4 text-right text-white">Aksi</th></tr></thead>
           <tbody>
             <template v-for="a in applicants.data" :key="a.id">
             <tr class="border-b transition hover:bg-emerald-50/40">
@@ -206,13 +214,13 @@ const savePayment = () => {
                 <span v-else class="inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1 ring-inset" :class="status(a[`${dimension}_status`]).classes">{{ status(a[`${dimension}_status`]).label }}</span>
                 <span v-if="dimension === 'selection' && selectionSchedule(a)" class="mt-1.5 block whitespace-nowrap text-[11px] font-semibold text-slate-500">{{ selectionSchedule(a) }}</span>
               </td>
-              <td class="p-4"><div class="flex items-center justify-end gap-2">
-                <button v-if="canSendNotification" type="button" :disabled="Boolean(notifying)" :aria-label="`Kirim ulang notifikasi status ${a.full_name}`" :title="`Kirim status terbaru kepada ${a.full_name}`" class="inline-flex min-w-[128px] items-center justify-center gap-2 rounded-lg border border-emerald-700 bg-white px-3 py-2 font-bold text-emerald-800 transition hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 disabled:cursor-wait disabled:opacity-50" @click="sendCurrentStatusNotification(a)">
+              <td class="w-[160px] p-4"><div class="flex min-w-[128px] flex-col items-stretch gap-2">
+                <button v-if="canSendNotification" type="button" :disabled="Boolean(notifying)" :aria-label="`Kirim ulang notifikasi status ${a.full_name}`" :title="`Kirim status terbaru kepada ${a.full_name}`" class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-700 bg-white px-3 py-2 font-bold text-emerald-800 transition hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 disabled:cursor-wait disabled:opacity-50" @click="sendCurrentStatusNotification(a)">
                   <svg v-if="notifying !== a.id" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/><path d="m15.5 4.5 2-2"/></svg>
                   <svg v-else class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"/><path class="opacity-75" d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
                   {{ notifying === a.id ? 'Mengirim…' : 'Kirim Notif' }}
                 </button>
-                <Link :href="`/admin/applicants/${a.id}`" class="inline-flex items-center rounded-lg bg-emerald-800 px-4 py-2 font-bold text-white transition hover:bg-emerald-700">Detail →</Link>
+                <Link :href="`/admin/applicants/${a.id}`" class="inline-flex w-full items-center justify-center rounded-lg bg-emerald-800 px-4 py-2 font-bold text-white transition hover:bg-emerald-700">Detail →</Link>
               </div></td>
             </tr>
             <tr v-if="selectionEditor.applicantId === a.id" class="border-b bg-blue-50/70">
@@ -243,6 +251,15 @@ const savePayment = () => {
           </tbody>
         </table>
       </div>
+      <nav v-if="applicants.last_page > 1" class="mt-5 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between" aria-label="Navigasi halaman pendaftar">
+        <p class="text-sm text-slate-600">Menampilkan <b class="text-emerald-900">{{ applicants.from }}–{{ applicants.to }}</b> dari <b class="text-emerald-900">{{ applicants.total }}</b> pendaftar</p>
+        <div class="flex flex-wrap items-center gap-1.5">
+          <template v-for="link in applicants.links" :key="link.label">
+            <button v-if="link.url" type="button" class="min-w-10 rounded-lg border px-3 py-2 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2" :class="link.active ? 'border-emerald-800 bg-emerald-800 text-white' : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-500 hover:text-emerald-800'" :aria-current="link.active ? 'page' : undefined" @click="goToPage(link.url)"><span v-html="paginationLabel(link.label)" /></button>
+            <span v-else class="min-w-10 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-center text-sm font-bold text-slate-400" aria-hidden="true"><span v-html="paginationLabel(link.label)" /></span>
+          </template>
+        </div>
+      </nav>
     </section>
   </main>
 </template>
