@@ -17,6 +17,13 @@ const statuses: Record<string, [string, string, string]> = {
   not_scheduled:['Belum Dijadwalkan','bg-slate-50 text-slate-700 ring-slate-200','bg-slate-400'], scheduled:['Dijadwalkan','bg-blue-50 text-blue-700 ring-blue-200','bg-blue-500'], passed:['Diterima','bg-emerald-50 text-emerald-700 ring-emerald-200','bg-emerald-500'], not_passed:['Tidak Diterima','bg-rose-50 text-rose-700 ring-rose-200','bg-rose-500'],
 };
 const badge = (value: string) => statuses[value] || [value?.replaceAll('_',' ') || '-', 'bg-slate-50 text-slate-700 ring-slate-200', 'bg-slate-400'];
+const documentStatuses: Record<string, [string, string]> = {
+  pending: ['Menunggu Review', 'bg-amber-50 text-amber-800 ring-amber-200'],
+  valid: ['Terverifikasi', 'bg-emerald-50 text-emerald-700 ring-emerald-200'],
+  revision_required: ['Perlu Perbaikan', 'bg-amber-50 text-amber-800 ring-amber-200'],
+  rejected: ['Ditolak', 'bg-rose-50 text-rose-700 ring-rose-200'],
+};
+const documentBadge = (value: string) => documentStatuses[value] || [value?.replaceAll('_', ' ') || '-', 'bg-slate-50 text-slate-700 ring-slate-200'];
 const documentNames: Record<string,string> = { recommendation_letter:'Surat Rekomendasi', diploma:'Ijazah', photo_4x6:'Foto 4×6', identity_card:'KTP', pddikti_screenshot:'Screenshot PDDIKTI / Penyetaraan', payment_proof:'Bukti Pembayaran' };
 const stage = computed(() => {
   if (props.applicant.selection_status === 'passed') return 5;
@@ -68,7 +75,7 @@ const statusDescription = computed(() => ({
             <div class="flex items-center justify-between"><h2 class="panel-title"><span class="panel-icon"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM15 3v5h5M9 12h6M9 16h5"/></svg></span>Dokumen Pendaftaran</h2><span class="text-xs font-bold text-emerald-700">{{ applicant.documents.length }} file</span></div>
             <div v-if="applicant.documents.length" class="mt-3 divide-y divide-slate-200/80">
               <div v-for="d in applicant.documents" :key="d.id" class="document-row">
-                <div class="min-w-0 sm:max-w-[300px]"><p class="text-sm font-bold leading-5 text-slate-700">{{ documentNames[d.type] || d.type }}</p><span class="mt-1 inline-flex rounded-md px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset" :class="badge(d.verification_status)[1]">{{ badge(d.verification_status)[0] }}</span></div>
+                <div class="min-w-0 sm:max-w-[300px]"><p class="text-sm font-bold leading-5 text-slate-700">{{ documentNames[d.type] || d.type }}</p><span class="mt-1 inline-flex rounded-md px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset" :class="documentBadge(d.verification_status)[1]">{{ documentBadge(d.verification_status)[0] }}</span></div>
                 <div class="grid w-full shrink-0 grid-cols-2 gap-1.5 sm:flex sm:w-auto sm:flex-wrap sm:justify-end">
                   <button type="button" class="mini-btn text-sky-700" :aria-label="`Lihat ${documentNames[d.type] || d.type}`" @click="selectedDocument = d"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg><span>Lihat</span></button>
                   <a :href="`/admin/documents/${d.id}/download`" class="mini-btn text-slate-700" :aria-label="`Unduh ${documentNames[d.type] || d.type}`"><svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 20h14" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Unduh</span></a>
