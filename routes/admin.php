@@ -49,6 +49,7 @@ Route::prefix('admin/users')->middleware(['auth', 'active.admin:super_admin'])->
     Route::post('/{user}/reset-password', [UserController::class, 'resetPassword'])->name('admin.users.reset-password');
 });
 Route::get('admin/reports/applicants.csv', [ReportController::class, 'applicants'])->middleware(['auth', 'active.admin:admin_pmb,finance,viewer'])->name('admin.reports.applicants');
+Route::get('admin/reports/attendance-paid.csv', [ReportController::class, 'paidApplicantsAttendance'])->middleware(['auth', 'active.admin:admin_pmb,finance,viewer'])->name('admin.reports.attendance-paid');
 Route::prefix('admin/settings')->middleware(['auth', 'active.admin:super_admin'])->group(function () {
     Route::get('/', [SettingsController::class, 'index'])->name('admin.settings.index');
     Route::put('/', [SettingsController::class, 'update'])->name('admin.settings.update');

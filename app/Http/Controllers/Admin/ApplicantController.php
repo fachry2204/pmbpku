@@ -226,6 +226,21 @@ class ApplicantController extends Controller
             }
             $locked->update($changes);
 
+            // Perubahan manual dari Data Pendaftar harus tercermin pula pada
+            // transaksi yang masih terbuka, agar halaman Pembayaran tidak
+            // menampilkan status lama yang berbeda dengan status pendaftar.
+            if ($data['dimension'] === 'payment') {
+                $openPayment = $locked->payments()
+                    ->whereIn('status', [PaymentStatus::Unpaid->value, PaymentStatus::Pending->value])
+                    ->latest()
+                    ->first();
+
+                $openPayment?->update([
+                    'status' => $data['status'],
+                    'paid_at' => $data['status'] === PaymentStatus::Paid->value ? now() : null,
+                ]);
+            }
+
             if ($data['dimension'] === 'selection' && $data['status'] === SelectionStatus::Scheduled->value) {
                 $startsAt = Carbon::createFromFormat(
                     'Y-m-d H:i',

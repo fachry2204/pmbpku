@@ -3,6 +3,15 @@ import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
 const props = defineProps<{ applicants: any; filters: any; registrationYears: number[]; statusSummary: Record<string, number> }>();
 const filters = reactive({ ...props.filters, registration_status: props.filters?.registration_status || '' });
+const attendanceDownloadUrl = computed(() => {
+  const params = new URLSearchParams();
+  for (const key of ['search', 'registration_year', 'document_status', 'selection_status']) {
+    const value = filters[key as keyof typeof filters];
+    if (value) params.set(key, String(value));
+  }
+  const query = params.toString();
+  return `/admin/reports/attendance-paid.csv${query ? `?${query}` : ''}`;
+});
 const page = usePage() as any;
 const role = computed(() => page.props.auth?.user?.role || 'viewer');
 const saving = ref('');
@@ -191,7 +200,7 @@ const savePayment = () => {
       </form>
       <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm">
         <div><p class="font-extrabold text-emerald-950">Proses pendaftaran massal</p><p class="text-xs text-slate-500">Pilih calon mahasiswa pada tabel, lalu jadwalkan seleksi sekaligus.</p></div>
-        <button type="button" :disabled="!selectedApplicants.length" class="rounded-xl bg-emerald-800 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40" @click="openBulkSchedule">Proses Pendaftaran <span v-if="selectedApplicants.length">({{ selectedApplicants.length }})</span></button>
+        <div class="flex flex-wrap items-center gap-2"><a :href="attendanceDownloadUrl" class="rounded-xl border border-emerald-700 bg-white px-5 py-2.5 text-sm font-bold text-emerald-800 transition hover:bg-emerald-50">↓ Download Peserta Absensi</a><button type="button" :disabled="!selectedApplicants.length" class="rounded-xl bg-emerald-800 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40" @click="openBulkSchedule">Proses Pendaftaran <span v-if="selectedApplicants.length">({{ selectedApplicants.length }})</span></button></div>
       </div>
       <div v-if="bulkScheduleEditor.open" class="mt-4 rounded-2xl border border-blue-200 bg-white p-5 shadow-lg">
         <div class="flex items-start gap-3"><span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-100 font-black text-blue-700">⌚</span><div><h3 class="font-extrabold text-slate-900">Jadwalkan {{ selectedApplicants.length }} peserta</h3><p class="mt-1 text-sm text-slate-500">Tanggal dan waktu yang dipilih berlaku untuk seluruh calon mahasiswa terpilih.</p></div></div>
