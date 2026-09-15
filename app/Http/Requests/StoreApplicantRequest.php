@@ -25,13 +25,14 @@ class StoreApplicantRequest extends FormRequest
     public function rules(): array
     {
         $fileRule = app(SettingsService::class)->get('registration.document_upload_disabled', false) ? ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:10240'] : ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:10240'];
+        $photoRule = app(SettingsService::class)->get('registration.document_upload_disabled', false) ? ['nullable', 'file', 'mimes:jpg,jpeg,png', 'max:10240'] : ['required', 'file', 'mimes:jpg,jpeg,png', 'max:10240'];
 
-        return ['submission_uuid' => ['required', 'uuid'], 'payment_method' => ['sometimes', 'nullable', 'string', 'max:30'], 'full_name' => ['required', 'string', 'min:3', 'max:150'], 'birth_place' => ['required', 'string', 'min:2', 'max:100'], 'birth_date' => ['required', 'date', 'before_or_equal:today'], 'address' => ['required', 'string', 'max:2000'], 'whatsapp' => ['required', 'string', 'max:30'], 'email' => ['required', 'email:rfc', 'max:190'], 'consent' => ['accepted'], ...collect(['recommendation_letter', 'diploma', 'photo_4x6', 'identity_card', 'pddikti_screenshot'])->mapWithKeys(fn ($key) => [$key => $fileRule])->all()];
+        return ['submission_uuid' => ['required', 'uuid'], 'payment_method' => ['sometimes', 'nullable', 'string', 'max:30'], 'full_name' => ['required', 'string', 'min:3', 'max:150'], 'birth_place' => ['required', 'string', 'min:2', 'max:100'], 'birth_date' => ['required', 'date', 'before_or_equal:today'], 'address' => ['required', 'string', 'max:2000'], 'whatsapp' => ['required', 'string', 'max:30'], 'email' => ['required', 'email:rfc', 'max:190'], 'consent' => ['accepted'], ...collect(['recommendation_letter', 'diploma', 'identity_card', 'pddikti_screenshot'])->mapWithKeys(fn ($key) => [$key => $fileRule])->all(), 'photo_4x6' => $photoRule];
     }
 
     public function messages(): array
     {
-        return ['required' => 'Kolom :attribute wajib diisi.', 'accepted' => 'Persetujuan wajib diberikan.', 'mimes' => 'Berkas :attribute harus berformat JPG, JPEG, PNG, atau PDF.', 'max' => 'Ukuran :attribute tidak boleh melebihi 10 MB.'];
+        return ['required' => 'Kolom :attribute wajib diisi.', 'accepted' => 'Persetujuan wajib diberikan.', 'mimes' => 'Berkas :attribute harus berformat JPG, JPEG, PNG, atau PDF.', 'photo_4x6.mimes' => 'Pas foto 4×6 harus berupa file gambar JPG, JPEG, atau PNG; PDF tidak dapat digunakan.', 'max' => 'Ukuran :attribute tidak boleh melebihi 10 MB.'];
     }
 
     public function attributes(): array

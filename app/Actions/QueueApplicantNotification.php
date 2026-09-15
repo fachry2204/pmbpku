@@ -40,9 +40,11 @@ final class QueueApplicantNotification
                 'attempts' => 0,
             ]);
 
-            // Diproses langsung agar notifikasi tetap terkirim di Plesk tanpa queue worker.
+            // Jalankan setelah respons HTTP selesai. Dengan begitu layanan email/WhatsApp
+            // yang lambat tidak membuat pendaftar menunggu di tombol "Menyimpan…",
+            // namun tetap tidak memerlukan queue worker pada Plesk.
             if ($log->wasRecentlyCreated) {
-                SendApplicantNotification::dispatchSync($log->id, $message);
+                SendApplicantNotification::dispatchAfterResponse($log->id, $message);
                 $processedChannels++;
             }
         }

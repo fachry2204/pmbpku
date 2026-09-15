@@ -7,13 +7,15 @@ const clientError=ref('');
 const errorAlert=ref<HTMLElement|null>(null);
 const isSubmitting=ref(false);
 const submitStatus=ref('');
-const errorModal=ref<{title:string,message:string}|null>(null);
+const errorModal=ref<{title:string,message:string,tone?:'error'|'notice'}|null>(null);
+let submissionTimeout: ReturnType<typeof setTimeout>|null=null;
+let submissionProgressNotice: ReturnType<typeof setTimeout>|null=null;
 const page=usePage();
 const DRAFT_KEY='pmb-registration-draft-v1';
 const form=useForm({submission_uuid:crypto.randomUUID() as string,full_name:'',birth_place:'',birth_date:'',address:'',whatsapp:'',email:'',consent:false,recommendation_letter:null as File|null,diploma:null as File|null,photo_4x6:null as File|null,identity_card:null as File|null,pddikti_screenshot:null as File|null});
 const registrationError=computed(()=>((form.errors as Record<string,string>).registration||''));
 const clearRegistrationError=()=>((form.clearErrors as (...fields:string[])=>void)('registration'));
-const docs=[['recommendation_letter','Surat rekomendasi','Surat rekomendasi atau keterangan resmi'],['diploma','Ijazah','Ijazah S1/sederajat/Pondok Pesantren'],['photo_4x6','Foto 4×6','JPG atau PNG lebih disarankan'],['identity_card','KTP','Kartu Tanda Penduduk yang jelas'],['pddikti_screenshot','Screenshot PDDIKTI / Penyetaraan','Tangkapan layar data PDDIKTI atau dokumen penyetaraan']] as const;
+const docs=[['recommendation_letter','Surat rekomendasi','Surat rekomendasi atau keterangan resmi'],['diploma','Ijazah','Ijazah S1/sederajat/Pondok Pesantren'],['photo_4x6','Foto 4×6','Wajib gambar JPG, JPEG, atau PNG — PDF tidak diterima'],['identity_card','KTP','Kartu Tanda Penduduk yang jelas'],['pddikti_screenshot','Screenshot PDDIKTI / Penyetaraan','Tangkapan layar data PDDIKTI atau dokumen penyetaraan']] as const;
 const documentKeys=docs.map(([key])=>key);
 const acceptedFileTypes=['image/jpeg','image/png','application/pdf'];
 const dataReady=computed(()=>form.full_name.length>=3&&form.birth_place.length>=2&&!!form.birth_date&&!!form.address&&!!form.whatsapp&&!!form.email);
@@ -27,8 +29,10 @@ const totalUploadBytes=computed(()=>docs.reduce((total,[key])=>total+(form[key]?
 const maxTotalUploadLabel=computed(()=>`${Math.floor(props.maxTotalUploadBytes/1024/1024)} MB`);
 const closeErrorModal=()=>{errorModal.value=null;};
 const showError=async(message:string,title='Pendaftaran belum dapat disimpan')=>{clientError.value=message;errorModal.value={title,message};await nextTick();errorAlert.value?.scrollIntoView({behavior:'smooth',block:'center'});};
-const isAcceptedFile=(file:File)=>/\.(jpe?g|png|pdf)$/i.test(file.name)&&(['','application/octet-stream'].includes(file.type)||acceptedFileTypes.includes(file.type));
-const selectFile=(key:typeof docs[number][0],event:Event)=>{const input=event.target as HTMLInputElement;const file=input.files?.[0]||null;clientError.value='';form.clearErrors(key);clearRegistrationError();if(!file){form[key]=null;return;}if(!isAcceptedFile(file)){input.value='';form[key]=null;void showError(`Berkas ${file.name} tidak dapat digunakan. Unggah hanya file JPG, JPEG, PNG, atau PDF.`,'Format file tidak didukung');return;}if(file.size>10*1024*1024){input.value='';form[key]=null;void showError(`Berkas ${file.name} melebihi batas 10 MB. Perkecil ukuran file lalu pilih kembali.`,'Ukuran file terlalu besar');return;}const previous=form[key];form[key]=file;if(totalUploadBytes.value>props.maxTotalUploadBytes){form[key]=previous;input.value='';void showError(`Total seluruh dokumen melebihi batas ${maxTotalUploadLabel.value}. Kompres atau perkecil beberapa file, lalu pilih kembali.`,'Total dokumen terlalu besar');}};
+const showNotice=(message:string,title='Informasi pengiriman')=>{errorModal.value={title,message,tone:'notice'};};
+const clearSubmissionTimers=()=>{if(submissionTimeout)clearTimeout(submissionTimeout);if(submissionProgressNotice)clearTimeout(submissionProgressNotice);submissionTimeout=null;submissionProgressNotice=null;};
+const isAcceptedFile=(key:typeof docs[number][0],file:File)=>{const isPhoto=key==='photo_4x6';const extension=isPhoto?/\.(jpe?g|png)$/i:/\.(jpe?g|png|pdf)$/i;const allowedMime=isPhoto?['image/jpeg','image/png']:acceptedFileTypes;return extension.test(file.name)&&(['','application/octet-stream'].includes(file.type)||allowedMime.includes(file.type));};
+const selectFile=(key:typeof docs[number][0],event:Event)=>{const input=event.target as HTMLInputElement;const file=input.files?.[0]||null;clientError.value='';form.clearErrors(key);clearRegistrationError();if(!file){form[key]=null;return;}if(!isAcceptedFile(key,file)){input.value='';form[key]=null;const message=key==='photo_4x6'?`Pas foto ${file.name} harus berupa gambar JPG, JPEG, atau PNG. File PDF tidak dapat digunakan sebagai foto profil.`:`Berkas ${file.name} tidak dapat digunakan. Unggah hanya file JPG, JPEG, PNG, atau PDF.`;void showError(message,'Format file tidak didukung');return;}if(file.size>10*1024*1024){input.value='';form[key]=null;void showError(`Berkas ${file.name} melebihi batas 10 MB. Perkecil ukuran file lalu pilih kembali.`,'Ukuran file terlalu besar');return;}const previous=form[key];form[key]=file;if(totalUploadBytes.value>props.maxTotalUploadBytes){form[key]=previous;input.value='';void showError(`Total seluruh dokumen melebihi batas ${maxTotalUploadLabel.value}. Kompres atau perkecil beberapa file, lalu pilih kembali.`,'Total dokumen terlalu besar');}};
 const maskDate=(event:Event)=>{const input=event.target as HTMLInputElement;const digits=input.value.replace(/\D/g,'').slice(0,8);input.value=digits.length>4?`${digits.slice(0,2)}/${digits.slice(2,4)}/${digits.slice(4)}`:digits.length>2?`${digits.slice(0,2)}/${digits.slice(2)}`:digits;form.birth_date=input.value;};
 const draftFields=['submission_uuid','full_name','birth_place','birth_date','address','whatsapp','email'] as const;
 const saveDraft=()=>{const data=Object.fromEntries(draftFields.map(key=>[key,form[key]]));localStorage.setItem(DRAFT_KEY,JSON.stringify({data,step:step.value}));};
@@ -45,10 +49,12 @@ const submit=()=>{
   }
   isSubmitting.value=true;
   submitStatus.value='Sedang mengirim data dan dokumen. Jangan tutup halaman ini.';
+  submissionProgressNotice=setTimeout(()=>{if(isSubmitting.value)showNotice('Pengiriman masih berlangsung. Koneksi atau ukuran dokumen dapat memengaruhi waktu unggah. Tetap biarkan halaman terbuka; Anda akan diberi tahu jika proses tidak menerima respons.','Dokumen masih sedang diunggah');},15000);
+  submissionTimeout=setTimeout(()=>{form.cancel();isSubmitting.value=false;submitStatus.value='';void showError('Pengiriman membutuhkan waktu lebih dari 60 detik. Data mungkin masih diproses. Jangan mengubah data; tunggu sebentar lalu cek status pendaftaran, atau tekan Simpan Pendaftaran lagi. Pengiriman ulang aman dan tidak membuat nomor pendaftaran ganda.','Pengiriman belum mendapat respons');},60000);
   form.post('/pendaftaran',{
     forceFormData:true,
     preserveScroll:true,
-    onSuccess:()=>localStorage.removeItem(DRAFT_KEY),
+    onSuccess:()=>{clearSubmissionTimers();localStorage.removeItem(DRAFT_KEY);},
     onError:(errors)=>{
       if(errors.email||errors.whatsapp)step.value=1;
       if((errors as Record<string,string>).documents||documentKeys.some(key=>Boolean((errors as Record<string,string>)[key]))){
@@ -63,7 +69,8 @@ const submit=()=>{
         void showError(messages.join('\n'),'Pendaftaran belum berhasil disimpan');
       }
     },
-    onFinish:()=>{isSubmitting.value=false;},
+    onCancel:()=>{if(isSubmitting.value)void showError('Pengiriman dibatalkan sebelum server memberikan respons. Silakan periksa koneksi internet lalu coba simpan kembali.','Pengiriman dibatalkan');},
+    onFinish:()=>{clearSubmissionTimers();isSubmitting.value=false;},
   });
 };
 </script>
@@ -89,7 +96,7 @@ const submit=()=>{
 
         <section v-if="documentUploadEnabled" v-show="step===2" class="space-y-4">
           <div v-if="restored" class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">Data diri berhasil dipulihkan. Demi keamanan browser, silakan pilih ulang semua dokumen.</div>
-          <label v-for="[key,label,hint] in docs" :key="key" class="group flex cursor-pointer flex-col gap-4 rounded-2xl border p-5 transition hover:border-[#07805c] hover:bg-emerald-50/40 sm:flex-row sm:items-center" :class="form.errors[key]?'border-red-300 bg-red-50/50':'border-slate-200'"><span class="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-emerald-100 text-xl text-[#087154]">▣</span><span class="min-w-0 flex-1"><b class="block text-slate-800">{{label}} <span class="text-red-600">*</span></b><small class="text-slate-500">{{hint}}</small><span class="mt-1 block truncate text-xs font-semibold" :class="form[key]?'text-[#07805c]':'text-slate-400'">{{fileName(key)}}</span><small v-if="form.errors[key]" class="mt-1 block font-semibold text-red-700">{{form.errors[key]}}</small></span><span class="rounded-lg border border-[#087154] px-4 py-2 text-sm font-bold text-[#087154]">Pilih File</span><input type="file" accept="image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf" class="sr-only" required @change="selectFile(key,$event)"/></label>
+          <label v-for="[key,label,hint] in docs" :key="key" class="group flex cursor-pointer flex-col gap-4 rounded-2xl border p-5 transition hover:border-[#07805c] hover:bg-emerald-50/40 sm:flex-row sm:items-center" :class="form.errors[key]?'border-red-300 bg-red-50/50':'border-slate-200'"><span class="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-emerald-100 text-xl text-[#087154]">▣</span><span class="min-w-0 flex-1"><b class="block text-slate-800">{{label}} <span class="text-red-600">*</span></b><small class="text-slate-500">{{hint}}</small><span class="mt-1 block truncate text-xs font-semibold" :class="form[key]?'text-[#07805c]':'text-slate-400'">{{fileName(key)}}</span><small v-if="form.errors[key]" class="mt-1 block font-semibold text-red-700">{{form.errors[key]}}</small></span><span class="rounded-lg border border-[#087154] px-4 py-2 text-sm font-bold text-[#087154]">Pilih File</span><input type="file" :accept="key==='photo_4x6'?'image/jpeg,image/png,.jpg,.jpeg,.png':'image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf'" class="sr-only" required @change="selectFile(key,$event)"/></label>
         </section>
 
         <section v-show="step===finalStep">
@@ -105,7 +112,7 @@ const submit=()=>{
     <Teleport to="body">
       <div v-if="errorModal" class="fixed inset-0 z-[100] grid place-items-center bg-slate-950/60 p-4" role="presentation" @click.self="closeErrorModal">
         <section role="alertdialog" aria-modal="true" aria-labelledby="registration-error-title" class="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
-          <div class="flex items-start gap-4"><span class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-red-100 text-2xl font-black text-red-700">!</span><div class="min-w-0 flex-1"><h2 id="registration-error-title" class="text-xl font-extrabold text-slate-900">{{errorModal.title}}</h2><div class="mt-3 space-y-2 text-sm leading-6 text-slate-600"><p v-for="message in errorModal.message.split('\n')" :key="message">{{message}}</p></div></div></div><button type="button" class="mt-7 w-full rounded-xl bg-[#064e3b] px-5 py-3 font-bold text-white" @click="closeErrorModal">Saya Mengerti</button>
+          <div class="flex items-start gap-4"><span class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-2xl font-black" :class="errorModal.tone==='notice'?'bg-amber-100 text-amber-700':'bg-red-100 text-red-700'">{{errorModal.tone==='notice'?'i':'!'}}</span><div class="min-w-0 flex-1"><h2 id="registration-error-title" class="text-xl font-extrabold text-slate-900">{{errorModal.title}}</h2><div class="mt-3 space-y-2 text-sm leading-6 text-slate-600"><p v-for="message in errorModal.message.split('\n')" :key="message">{{message}}</p></div></div></div><button type="button" class="mt-7 w-full rounded-xl bg-[#064e3b] px-5 py-3 font-bold text-white" @click="closeErrorModal">Saya Mengerti</button>
         </section>
       </div>
     </Teleport>
