@@ -14,6 +14,7 @@ const user = usePage().props.auth.user;
 
 const form = useForm({
     name: user.name,
+    username: user.username,
     email: user.email,
 });
 </script>
@@ -22,11 +23,11 @@ const form = useForm({
     <section>
         <header>
             <h2 class="text-lg font-medium text-gray-900">
-                Profile Information
+                Informasi Profil
             </h2>
 
             <p class="mt-1 text-sm text-gray-600">
-                Update your account's profile information and email address.
+                Perbarui nama, username, dan alamat email akun Anda.
             </p>
         </header>
 
@@ -35,7 +36,7 @@ const form = useForm({
             class="mt-6 space-y-6"
         >
             <div>
-                <InputLabel for="name" value="Name" />
+                <InputLabel for="name" value="Nama Lengkap" />
 
                 <TextInput
                     id="name"
@@ -51,7 +52,23 @@ const form = useForm({
             </div>
 
             <div>
-                <InputLabel for="email" value="Email" />
+                <InputLabel for="username" value="Username" />
+
+                <TextInput
+                    id="username"
+                    type="text"
+                    class="mt-1 block w-full"
+                    v-model="form.username"
+                    required
+                    autocomplete="username"
+                />
+
+                <p class="mt-1 text-xs text-slate-500">Gunakan huruf, angka, tanda hubung, atau garis bawah.</p>
+                <InputError class="mt-2" :message="form.errors.username" />
+            </div>
+
+            <div>
+                <InputLabel for="email" value="Alamat Email" />
 
                 <TextInput
                     id="email"
@@ -87,7 +104,7 @@ const form = useForm({
             </div>
 
             <div class="flex items-center gap-4">
-                <PrimaryButton :disabled="form.processing">Save</PrimaryButton>
+                <PrimaryButton :disabled="form.processing">Simpan Profil</PrimaryButton>
 
                 <Transition
                     enter-active-class="transition ease-in-out"
@@ -99,7 +116,7 @@ const form = useForm({
                         v-if="form.recentlySuccessful"
                         class="text-sm text-gray-600"
                     >
-                        Saved.
+                        Profil berhasil disimpan.
                     </p>
                 </Transition>
             </div>

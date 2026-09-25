@@ -23,4 +23,27 @@ class AdminUserManagementTest extends TestCase
         User::factory()->create(['username' => 'hartono']);
         $this->actingAs($admin)->from('/admin/users')->post('/admin/users', ['name' => 'Hartono Baru', 'username' => 'hartono', 'email' => 'baru@example.test', 'role' => 'viewer', 'password' => 'PasswordAman123', 'password_confirmation' => 'PasswordAman123'])->assertRedirect('/admin/users')->assertSessionHasErrors('username');
     }
+
+    public function test_super_admin_can_delete_another_user_after_confirmation_request(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin', 'is_active' => true]);
+        $user = User::factory()->create(['role' => 'viewer', 'is_active' => true]);
+
+        $this->actingAs($admin)->from('/admin/users')->delete("/admin/users/{$user->id}")
+            ->assertRedirect('/admin/users')
+            ->assertSessionHas('success', "Pengguna {$user->name} berhasil dihapus.");
+
+        $this->assertDatabaseMissing('users', ['id' => $user->id]);
+    }
+
+    public function test_super_admin_cannot_delete_own_account(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin', 'is_active' => true]);
+
+        $this->actingAs($admin)->from('/admin/users')->delete("/admin/users/{$admin->id}")
+            ->assertRedirect('/admin/users')
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('users', ['id' => $admin->id]);
+    }
 }

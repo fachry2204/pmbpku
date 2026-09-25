@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {Head,Link,useForm,usePage} from '@inertiajs/vue3';import {computed,nextTick,onMounted,ref,watch} from 'vue';
-const props=defineProps<{channels:any[],paymentError:string|null,registrationFee:number,documentUploadEnabled:boolean,maxTotalUploadBytes:number}>();
+const props=defineProps<{channels:any[],paymentError:string|null,registrationFee:number,documentUploadEnabled:boolean}>();
 const step=ref(1);
 const restored=ref(false);
 const clientError=ref('');
@@ -25,28 +25,22 @@ const totalSteps=computed(()=>stepLabels.value.length);
 const finalStep=computed(()=>totalSteps.value);
 const next=()=>{if(step.value===1&&dataReady.value&&props.documentUploadEnabled)step.value=2;};
 const fileName=(key:typeof docs[number][0])=>form[key]?.name||'Belum ada file';
-const totalUploadBytes=computed(()=>docs.reduce((total,[key])=>total+(form[key]?.size||0),0));
-const maxTotalUploadLabel=computed(()=>`${Math.floor(props.maxTotalUploadBytes/1024/1024)} MB`);
 const closeErrorModal=()=>{errorModal.value=null;};
 const showError=async(message:string,title='Pendaftaran belum dapat disimpan')=>{clientError.value=message;errorModal.value={title,message};await nextTick();errorAlert.value?.scrollIntoView({behavior:'smooth',block:'center'});};
 const showNotice=(message:string,title='Informasi pengiriman')=>{errorModal.value={title,message,tone:'notice'};};
 const clearSubmissionTimers=()=>{if(submissionTimeout)clearTimeout(submissionTimeout);if(submissionProgressNotice)clearTimeout(submissionProgressNotice);submissionTimeout=null;submissionProgressNotice=null;};
 const isAcceptedFile=(key:typeof docs[number][0],file:File)=>{const isPhoto=key==='photo_4x6';const extension=isPhoto?/\.(jpe?g|png)$/i:/\.(jpe?g|png|pdf)$/i;const allowedMime=isPhoto?['image/jpeg','image/png']:acceptedFileTypes;return extension.test(file.name)&&(['','application/octet-stream'].includes(file.type)||allowedMime.includes(file.type));};
-const selectFile=(key:typeof docs[number][0],event:Event)=>{const input=event.target as HTMLInputElement;const file=input.files?.[0]||null;clientError.value='';form.clearErrors(key);clearRegistrationError();if(!file){form[key]=null;return;}if(!isAcceptedFile(key,file)){input.value='';form[key]=null;const message=key==='photo_4x6'?`Pas foto ${file.name} harus berupa gambar JPG, JPEG, atau PNG. File PDF tidak dapat digunakan sebagai foto profil.`:`Berkas ${file.name} tidak dapat digunakan. Unggah hanya file JPG, JPEG, PNG, atau PDF.`;void showError(message,'Format file tidak didukung');return;}if(file.size>10*1024*1024){input.value='';form[key]=null;void showError(`Berkas ${file.name} melebihi batas 10 MB. Perkecil ukuran file lalu pilih kembali.`,'Ukuran file terlalu besar');return;}const previous=form[key];form[key]=file;if(totalUploadBytes.value>props.maxTotalUploadBytes){form[key]=previous;input.value='';void showError(`Total seluruh dokumen melebihi batas ${maxTotalUploadLabel.value}. Kompres atau perkecil beberapa file, lalu pilih kembali.`,'Total dokumen terlalu besar');}};
+const selectFile=(key:typeof docs[number][0],event:Event)=>{const input=event.target as HTMLInputElement;const file=input.files?.[0]||null;clientError.value='';form.clearErrors(key);clearRegistrationError();if(!file){form[key]=null;return;}if(!isAcceptedFile(key,file)){input.value='';form[key]=null;const message=key==='photo_4x6'?`Pas foto ${file.name} harus berupa gambar JPG, JPEG, atau PNG. File PDF tidak dapat digunakan sebagai foto profil.`:`Berkas ${file.name} tidak dapat digunakan. Unggah hanya file JPG, JPEG, PNG, atau PDF.`;void showError(message,'Format file tidak didukung');return;}if(file.size>10*1024*1024){input.value='';form[key]=null;void showError(`Berkas ${file.name} melebihi batas 10 MB. Perkecil ukuran file lalu pilih kembali.`,'Ukuran file terlalu besar');return;}form[key]=file;};
 const maskDate=(event:Event)=>{const input=event.target as HTMLInputElement;const digits=input.value.replace(/\D/g,'').slice(0,8);input.value=digits.length>4?`${digits.slice(0,2)}/${digits.slice(2,4)}/${digits.slice(4)}`:digits.length>2?`${digits.slice(0,2)}/${digits.slice(2)}`:digits;form.birth_date=input.value;};
 const draftFields=['submission_uuid','full_name','birth_place','birth_date','address','whatsapp','email'] as const;
 const saveDraft=()=>{const data=Object.fromEntries(draftFields.map(key=>[key,form[key]]));localStorage.setItem(DRAFT_KEY,JSON.stringify({data,step:step.value}));};
-onMounted(()=>{try{const draft=JSON.parse(localStorage.getItem(DRAFT_KEY)||'null');if(draft?.data){draftFields.forEach(key=>{if(typeof draft.data[key]==='string')form[key]=draft.data[key]});restored.value=true;step.value=draft.step>=2&&dataReady.value?2:1;}}catch{localStorage.removeItem(DRAFT_KEY);}const parameters=new URLSearchParams(window.location.search);if(parameters.get('upload_error')==='too_large'){void showError('Ukuran total dokumen melebihi batas server. Unggah hanya JPG, JPEG, PNG, atau PDF dengan total maksimal 10 MB.','Dokumen terlalu besar');window.history.replaceState({},'',window.location.pathname);}});
+onMounted(()=>{try{const draft=JSON.parse(localStorage.getItem(DRAFT_KEY)||'null');if(draft?.data){draftFields.forEach(key=>{if(typeof draft.data[key]==='string')form[key]=draft.data[key]});restored.value=true;step.value=draft.step>=2&&dataReady.value?2:1;}}catch{localStorage.removeItem(DRAFT_KEY);}const parameters=new URLSearchParams(window.location.search);if(parameters.get('upload_error')==='server_limit'){void showError('Server belum dapat menerima semua dokumen sekaligus. Setiap dokumen boleh maksimal 10 MB. Coba ulangi pengiriman; bila masalah berulang, hubungi panitia.','Dokumen belum dapat diunggah');window.history.replaceState({},'',window.location.pathname);}});
 watch(()=>((page.props as any).flash?.error as string|undefined),(message)=>{if(message)void showError(message);},{immediate:true});
 watch([step,...draftFields.map(key=>()=>form[key])],saveDraft);
 const submit=()=>{
   clientError.value='';
   submitStatus.value='';
   clearRegistrationError();
-  if(totalUploadBytes.value>props.maxTotalUploadBytes){
-    void showError(`Total seluruh dokumen melebihi batas server ${maxTotalUploadLabel.value}. Kompres atau perkecil dokumen sebelum mengirim.`);
-    return;
-  }
   isSubmitting.value=true;
   submitStatus.value='Sedang mengirim data dan dokumen. Jangan tutup halaman ini.';
   submissionProgressNotice=setTimeout(()=>{if(isSubmitting.value)showNotice('Pengiriman masih berlangsung. Koneksi atau ukuran dokumen dapat memengaruhi waktu unggah. Tetap biarkan halaman terbuka; Anda akan diberi tahu jika proses tidak menerima respons.','Dokumen masih sedang diunggah');},15000);
@@ -86,7 +80,7 @@ const submit=()=>{
       </div>
 
       <form @submit.prevent="submit" class="islamic-glass-card rounded-[28px] p-6 md:p-10">
-        <header class="mb-8 border-b pb-6"><p class="text-sm font-bold uppercase tracking-[.2em] text-[#b38b21]">Langkah {{step}} dari {{totalSteps}}</p><h1 class="mt-2 text-3xl font-extrabold text-[#064e3b]">{{step===1?'Data Diri Pendaftar':props.documentUploadEnabled&&step===2?'Unggah Dokumen':'Konfirmasi Pendaftaran'}}</h1><p v-if="step < finalStep" class="mt-2 text-slate-500">{{step===1?'Pastikan identitas dan kontak dapat dihubungi.':`Hanya JPG, JPEG, PNG, atau PDF. Total seluruh dokumen maksimal ${maxTotalUploadLabel}.`}}</p></header>
+        <header class="mb-8 border-b pb-6"><p class="text-sm font-bold uppercase tracking-[.2em] text-[#b38b21]">Langkah {{step}} dari {{totalSteps}}</p><h1 class="mt-2 text-3xl font-extrabold text-[#064e3b]">{{step===1?'Data Diri Pendaftar':props.documentUploadEnabled&&step===2?'Unggah Dokumen':'Konfirmasi Pendaftaran'}}</h1><p v-if="step < finalStep" class="mt-2 text-slate-500">{{step===1?'Pastikan identitas dan kontak dapat dihubungi.':'Hanya JPG, JPEG, PNG, atau PDF. Maksimal 10 MB untuk setiap dokumen; pas foto hanya JPG, JPEG, atau PNG.'}}</p></header>
 
         <div ref="errorAlert" v-if="clientError||registrationError" role="alert" aria-live="assertive" class="mb-6 rounded-2xl border border-red-300 bg-red-50 p-4 text-red-900 shadow-sm"><div class="flex items-start gap-3"><span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-red-100 font-black text-red-700">!</span><div><p class="font-extrabold">Pendaftaran belum berhasil dikirim</p><p class="mt-1 text-sm leading-6">{{clientError||registrationError}}</p></div></div></div>
 

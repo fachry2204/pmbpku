@@ -24,7 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (PostTooLargeException $exception, Request $request) {
             if ($request->is('pendaftaran')) {
-                return redirect()->route('registration.create', ['upload_error' => 'too_large']);
+                return redirect()->route('registration.create', ['upload_error' => 'server_limit']);
             }
         });
     })->create();

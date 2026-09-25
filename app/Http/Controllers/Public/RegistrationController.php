@@ -46,7 +46,6 @@ class RegistrationController extends Controller
             'paymentError' => $paymentError,
             'registrationFee' => $amount,
             'documentUploadEnabled' => ! $settings->get('registration.document_upload_disabled', false),
-            'maxTotalUploadBytes' => $this->maxTotalUploadBytes(),
         ]);
     }
 
@@ -133,36 +132,6 @@ class RegistrationController extends Controller
         $applicant = Applicant::where('registration_number', $registrationNumber)->firstOrFail();
 
         return Inertia::render('Public/Success', ['applicant' => ['registration_number' => $applicant->registration_number, 'full_name' => $applicant->full_name, 'payment_status' => $applicant->payment_status], 'mayarLinkUrl' => $settings->get('payment.provider', 'duitku') === 'mayar_link' ? route('payment.mayar-link.redirect', $applicant->registration_number) : null]);
-    }
-
-    private function maxTotalUploadBytes(): int
-    {
-        $postMax = $this->iniBytes((string) ini_get('post_max_size'));
-        $configuredMaximum = 10 * 1024 * 1024;
-
-        if ($postMax <= 0) {
-            return $configuredMaximum;
-        }
-
-        // Sisakan ruang untuk field teks dan overhead multipart/form-data.
-        return max(1024 * 1024, min($configuredMaximum, $postMax - 512 * 1024));
-    }
-
-    private function iniBytes(string $value): int
-    {
-        $value = trim($value);
-        if ($value === '') {
-            return 0;
-        }
-
-        $number = (float) $value;
-
-        return match (strtolower(substr($value, -1))) {
-            'g' => (int) ($number * 1024 * 1024 * 1024),
-            'm' => (int) ($number * 1024 * 1024),
-            'k' => (int) ($number * 1024),
-            default => (int) $number,
-        };
     }
 
     private function nextRegistrationNumber(AdmissionPeriod $period, int $year): string

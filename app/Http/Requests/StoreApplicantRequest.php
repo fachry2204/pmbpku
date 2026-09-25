@@ -4,12 +4,9 @@ namespace App\Http\Requests;
 
 use App\Services\SettingsService;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Validator;
 
 class StoreApplicantRequest extends FormRequest
 {
-    private const MAX_TOTAL_UPLOAD_BYTES = 10 * 1024 * 1024;
-
     public function authorize(): bool
     {
         return true;
@@ -46,15 +43,4 @@ class StoreApplicantRequest extends FormRequest
         ];
     }
 
-    public function withValidator(Validator $validator): void
-    {
-        $validator->after(function (Validator $validator): void {
-            $totalSize = collect(['recommendation_letter', 'diploma', 'photo_4x6', 'identity_card', 'pddikti_screenshot'])
-                ->sum(fn (string $key) => (int) ($this->file($key)?->getSize() ?? 0));
-
-            if ($totalSize > self::MAX_TOTAL_UPLOAD_BYTES) {
-                $validator->errors()->add('documents', 'Total ukuran seluruh dokumen tidak boleh melebihi 10 MB. Kompres atau perkecil file sebelum mengirim.');
-            }
-        });
-    }
 }

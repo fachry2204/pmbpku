@@ -195,7 +195,7 @@ const savePayment = () => {
         <input v-model="filters.search" placeholder="Nama / nomor pendaftaran" class="rounded-xl border-slate-300" />
         <select v-model="filters.registration_year" class="rounded-xl border-slate-300"><option value="">Semua tahun pendaftaran</option><option v-for="year in registrationYears" :key="year" :value="year">Tahun {{ year }}</option></select>
         <select v-model="filters.payment_status" class="rounded-xl border-slate-300"><option value="">Semua pembayaran</option><option value="unpaid">Belum bayar</option><option value="paid">Lunas</option><option value="failed">Gagal</option></select>
-        <select v-model="filters.document_status" class="rounded-xl border-slate-300"><option value="">Semua berkas</option><option value="pending_review">Menunggu review</option><option value="complete">Lengkap</option><option value="incomplete">Belum lengkap</option></select>
+        <select v-model="filters.document_status" class="rounded-xl border-slate-300"><option value="">Semua berkas</option><option value="pending_review">Menunggu review</option><option value="revision_submitted">Perbaikan dikirim</option><option value="complete">Lengkap</option><option value="incomplete">Belum lengkap</option></select>
         <button class="rounded-xl bg-emerald-800 py-3 font-bold text-white">Filter</button>
       </form>
       <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm">

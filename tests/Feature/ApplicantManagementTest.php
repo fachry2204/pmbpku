@@ -111,16 +111,23 @@ class ApplicantManagementTest extends TestCase
             $number++;
         }
 
+        $expectedCounts = [
+            'not_paid' => 1,
+            'paid' => 4,
+            'documents_complete' => 3,
+            'selection_stage' => 1,
+            'selection_passed' => 1,
+        ];
+
         foreach ($states as $status => $state) {
             $this->actingAs($this->admin())
                 ->get('/admin/applicants?registration_status='.$status)
                 ->assertOk()
                 ->assertInertia(fn (Assert $page) => $page
                     ->where('filters.registration_status', $status)
-                    ->has('applicants.data', 1)
-                    ->where('applicants.data.0.id', $applicants[$status]->id)
+                    ->has('applicants.data', $expectedCounts[$status])
                     ->where('statusSummary.all', 5)
-                    ->where("statusSummary.{$status}", 1)
+                    ->where("statusSummary.{$status}", $expectedCounts[$status])
                 );
         }
     }

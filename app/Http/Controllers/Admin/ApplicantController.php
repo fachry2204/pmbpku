@@ -76,17 +76,12 @@ class ApplicantController extends Controller
             'selection_stage' => $query
                 ->where('selection_status', '!=', SelectionStatus::NotScheduled->value)
                 ->where('selection_status', '!=', SelectionStatus::Passed->value),
-            'documents_complete' => $query
-                ->where('selection_status', SelectionStatus::NotScheduled->value)
-                ->where('document_status', DocumentStatus::Complete->value),
-            'paid' => $query
-                ->where('selection_status', SelectionStatus::NotScheduled->value)
-                ->where('document_status', '!=', DocumentStatus::Complete->value)
-                ->where('payment_status', PaymentStatus::Paid->value),
-            'not_paid' => $query
-                ->where('selection_status', SelectionStatus::NotScheduled->value)
-                ->where('document_status', '!=', DocumentStatus::Complete->value)
-                ->where('payment_status', '!=', PaymentStatus::Paid->value),
+            // Kartu ringkasan adalah metrik independen, bukan tahapan yang
+            // saling menggantikan. Pendaftar yang berkasnya sudah diperiksa
+            // tetap termasuk total pembayaran yang sudah diterima.
+            'documents_complete' => $query->where('document_status', DocumentStatus::Complete->value),
+            'paid' => $query->where('payment_status', PaymentStatus::Paid->value),
+            'not_paid' => $query->where('payment_status', '!=', PaymentStatus::Paid->value),
             default => null,
         };
     }

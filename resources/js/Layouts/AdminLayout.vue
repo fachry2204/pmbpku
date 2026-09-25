@@ -36,7 +36,7 @@ const active = (href: string) => href === '/admin/dashboard' ? current.value.sta
           </Link>
         </nav>
       </div>
-      <div class="border-t border-slate-100 p-4"><div class="flex items-center gap-3 rounded-xl bg-slate-50 p-3"><span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#07583f] text-xs font-bold text-white">{{user?.name?.slice(0,2).toUpperCase()||'AD'}}</span><div class="min-w-0"><b class="block truncate text-xs">{{user?.name}}</b><span class="block truncate text-[10px] text-slate-500">{{user?.email}}</span></div></div></div>
+      <div class="border-t border-slate-100 p-4"><Link href="/profile" class="flex items-center gap-3 rounded-xl bg-slate-50 p-3 transition hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-[#07805c] focus:ring-offset-2"><span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#07583f] text-xs font-bold text-white">{{user?.name?.slice(0,2).toUpperCase()||'AD'}}</span><div class="min-w-0 flex-1"><b class="block truncate text-xs">{{user?.name}}</b><span class="block truncate text-[10px] text-slate-500">{{user?.email}}</span></div><svg class="h-4 w-4 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg></Link></div>
     </aside>
     <div class="lg:pl-64">
       <header class="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-slate-200 bg-white/95 px-5 backdrop-blur md:px-8">

@@ -13,12 +13,13 @@ const remove = () => { if (window.confirm(`Hapus permanen ${props.applicant.full
 const review = (document: any, status: string) => { const note = status === 'revision_required' ? window.prompt('Catatan perbaikan yang wajib ditampilkan ke pendaftar:') || '' : null; if (status === 'revision_required' && !note) return; reviewingId.value = document.id; router.patch(`/admin/applicants/${props.applicant.id}/documents/${document.id}`, { verification_status: status, review_note: note }, { preserveScroll: true, onFinish: () => reviewingId.value = null }); };
 const statuses: Record<string, [string, string, string]> = {
   unpaid:['Belum Bayar','bg-rose-50 text-rose-700 ring-rose-200','bg-rose-500'], pending:['Belum Bayar','bg-rose-50 text-rose-700 ring-rose-200','bg-rose-500'], paid:['Lunas','bg-emerald-50 text-emerald-700 ring-emerald-200','bg-emerald-500'], failed:['Gagal','bg-rose-50 text-rose-700 ring-rose-200','bg-rose-500'],
-  pending_review:['Menunggu Review','bg-amber-50 text-amber-800 ring-amber-200','bg-amber-500'], complete:['Berkas Lengkap','bg-emerald-50 text-emerald-700 ring-emerald-200','bg-emerald-500'], incomplete:['Belum Lengkap','bg-rose-50 text-rose-700 ring-rose-200','bg-rose-500'], valid:['Valid','bg-emerald-50 text-emerald-700 ring-emerald-200','bg-emerald-500'], revision_required:['Perlu Perbaikan','bg-amber-50 text-amber-800 ring-amber-200','bg-amber-500'],
+  pending_review:['Menunggu Review','bg-amber-50 text-amber-800 ring-amber-200','bg-amber-500'], revision_submitted:['Perbaikan Dikirim','bg-blue-50 text-blue-700 ring-blue-200','bg-blue-500'], complete:['Berkas Lengkap','bg-emerald-50 text-emerald-700 ring-emerald-200','bg-emerald-500'], incomplete:['Belum Lengkap','bg-rose-50 text-rose-700 ring-rose-200','bg-rose-500'], valid:['Valid','bg-emerald-50 text-emerald-700 ring-emerald-200','bg-emerald-500'], revision_required:['Perlu Perbaikan','bg-amber-50 text-amber-800 ring-amber-200','bg-amber-500'],
   not_scheduled:['Belum Dijadwalkan','bg-slate-50 text-slate-700 ring-slate-200','bg-slate-400'], scheduled:['Dijadwalkan','bg-blue-50 text-blue-700 ring-blue-200','bg-blue-500'], passed:['Diterima','bg-emerald-50 text-emerald-700 ring-emerald-200','bg-emerald-500'], not_passed:['Tidak Diterima','bg-rose-50 text-rose-700 ring-rose-200','bg-rose-500'],
 };
 const badge = (value: string) => statuses[value] || [value?.replaceAll('_',' ') || '-', 'bg-slate-50 text-slate-700 ring-slate-200', 'bg-slate-400'];
 const documentStatuses: Record<string, [string, string]> = {
   pending: ['Menunggu Review', 'bg-amber-50 text-amber-800 ring-amber-200'],
+  revision_submitted: ['Perbaikan Dikirim', 'bg-blue-50 text-blue-700 ring-blue-200'],
   valid: ['Terverifikasi', 'bg-emerald-50 text-emerald-700 ring-emerald-200'],
   revision_required: ['Perlu Perbaikan', 'bg-amber-50 text-amber-800 ring-amber-200'],
   rejected: ['Ditolak', 'bg-rose-50 text-rose-700 ring-rose-200'],
