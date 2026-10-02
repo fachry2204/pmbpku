@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {Head,Link,router,useForm,usePage} from '@inertiajs/vue3';import {computed,nextTick,onMounted,onUnmounted,ref,watch} from 'vue';
-const props=defineProps<{channels:any[],paymentError:string|null,registrationFee:number,documentUploadEnabled:boolean}>();
+const props=defineProps<{channels:any[],paymentError:string|null,registrationFee:number,documentUploadEnabled:boolean,registrationOpen:boolean}>();
 const step=ref(1);
 const restored=ref(false);
 const clientError=ref('');
@@ -81,6 +81,8 @@ const submit=()=>{
     <section class="mx-auto max-w-4xl">
       <div class="mb-7 text-center"><a href="/" class="inline-flex"><img src="/images/logo-footer-pku.png" alt="Pendidikan Kader Ulama MUI Provinsi DKI Jakarta" class="h-16 max-w-full rounded-md object-contain" /></a></div>
 
+      <div v-if="!props.registrationOpen" class="islamic-glass-card rounded-[28px] p-7 text-center sm:p-10"><span class="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-amber-100 text-3xl text-amber-700">◷</span><p class="mt-5 text-sm font-bold uppercase tracking-[.18em] text-amber-700">Informasi Pendaftaran</p><h1 class="mt-2 text-3xl font-extrabold text-[#064e3b]">Pendaftaran sedang ditutup</h1><p class="mx-auto mt-3 max-w-xl leading-7 text-slate-600">Saat ini kami belum menerima pendaftaran peserta baru. Silakan kunjungi kembali halaman ini atau hubungi panitia untuk informasi jadwal pembukaan berikutnya.</p><Link href="/" class="mt-7 inline-flex rounded-xl bg-[#064e3b] px-6 py-3 font-bold text-white">Kembali ke halaman utama</Link></div>
+      <template v-else>
       <div v-if="totalSteps > 1" class="islamic-glass-card mb-7 rounded-2xl p-5">
         <div class="relative flex justify-between"><div class="absolute left-[12%] right-[12%] top-5 h-1 bg-slate-100"><div class="h-full bg-[#d4af37] transition-all duration-500" :style="{width:`${((step-1)/(totalSteps-1))*100}%`}"></div></div><div v-for="(label,i) in stepLabels" :key="label" class="relative z-10 flex flex-1 flex-col items-center"><span class="grid h-10 w-10 place-items-center rounded-full text-sm font-black transition" :class="step>=i+1?'bg-[#064e3b] text-white ring-4 ring-emerald-100':'bg-slate-100 text-slate-400'">{{i+1}}</span><span class="mt-2 text-center text-xs font-bold sm:text-sm" :class="step>=i+1?'text-[#064e3b]':'text-slate-400'">{{label}}</span></div></div>
       </div>
@@ -108,9 +110,13 @@ const submit=()=>{
         <div v-if="form.progress" class="mt-3 h-2 overflow-hidden rounded-full bg-slate-100"><div class="h-full bg-[#07805c] transition-all" :style="{width:form.progress.percentage+'%'}"></div></div>
         <footer class="mt-8 flex items-center justify-between border-t pt-6"><button v-if="step>1" type="button" @click="step--" :disabled="isSubmitting" class="rounded-xl border border-slate-300 px-6 py-3 font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40">← Kembali</button><span v-else></span><button v-if="step<finalStep" type="button" @click="next" :disabled="isSubmitting||(step===1?!dataReady:!docsReady)" class="rounded-xl bg-[#064e3b] px-7 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">Lanjutkan →</button><button v-else type="submit" :disabled="isSubmitting||form.processing||!form.consent" class="rounded-xl bg-[#d4af37] px-7 py-3 font-extrabold text-[#173b2e] disabled:cursor-not-allowed disabled:opacity-40">{{isSubmitting||form.processing?'Menyimpan…':'Simpan Pendaftaran →'}}</button></footer>
       </form>
+      </template>
     </section>
     <Teleport to="body">
-      <div v-if="errorModal" class="fixed inset-0 z-[100] grid place-items-center bg-slate-950/60 p-4" role="presentation" @click.self="closeErrorModal">
+      <div v-if="!props.registrationOpen" class="fixed inset-0 z-[100] grid place-items-center bg-slate-950/65 p-4">
+        <section role="alertdialog" aria-modal="true" aria-labelledby="registration-closed-title" class="w-full max-w-md rounded-3xl bg-white p-6 text-center shadow-2xl sm:p-8"><span class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-amber-100 text-2xl text-amber-700">◷</span><h2 id="registration-closed-title" class="mt-4 text-xl font-extrabold text-slate-900">Pendaftaran sedang ditutup</h2><p class="mt-3 text-sm leading-6 text-slate-600">Formulir belum dapat dikirim saat ini. Silakan cek kembali nanti atau hubungi panitia untuk informasi pembukaan pendaftaran.</p><Link href="/" class="mt-6 block rounded-xl bg-[#064e3b] px-5 py-3 font-bold text-white">Kembali ke halaman utama</Link></section>
+      </div>
+      <div v-else-if="errorModal" class="fixed inset-0 z-[100] grid place-items-center bg-slate-950/60 p-4" role="presentation" @click.self="closeErrorModal">
         <section role="alertdialog" aria-modal="true" aria-labelledby="registration-error-title" class="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
           <div class="flex items-start gap-4"><span class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-2xl font-black" :class="errorModal.tone==='notice'?'bg-amber-100 text-amber-700':'bg-red-100 text-red-700'">{{errorModal.tone==='notice'?'i':'!'}}</span><div class="min-w-0 flex-1"><h2 id="registration-error-title" class="text-xl font-extrabold text-slate-900">{{errorModal.title}}</h2><div class="mt-3 space-y-2 text-sm leading-6 text-slate-600"><p v-for="message in errorModal.message.split('\n')" :key="message">{{message}}</p></div></div></div><button type="button" class="mt-7 w-full rounded-xl bg-[#064e3b] px-5 py-3 font-bold text-white" @click="closeErrorModal">Saya Mengerti</button>
         </section>

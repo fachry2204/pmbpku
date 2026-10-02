@@ -29,6 +29,7 @@ const copyUrl = async (label: string, value: string) => {
 
 const sections = computed<Section[]>(() => [
   { tab: 'registration', title: 'Pendaftaran', description: 'Atur biaya dan langkah upload dokumen pada formulir pendaftaran.', accent: 'bg-amber-50 text-amber-700', icon: 'Rp', fields: [
+    { key: 'registration_open', label: 'Buka Pendaftaran', type: 'toggle', hint: 'Jika aktif, calon peserta dapat mengirim pendaftaran. Jika nonaktif, formulir ditutup dan peserta mendapat pemberitahuan.' },
     { key: 'pmb_registration_year', label: 'Tahun Pendaftaran', type: 'year', hint: 'Tahun ini digunakan pada periode PMB dan nomor pendaftaran baru.' },
     { key: 'pmb_registration_fee', label: 'Harga Pendaftaran (Rp)', type: 'number', hint: 'Nominal biaya pendaftaran sebelum biaya layanan.' },
     { key: 'pmb_selection_location', label: 'Lokasi Seleksi', type: 'text', hint: 'Lokasi ini otomatis disimpan ke jadwal seleksi baru dan ditampilkan pada status serta kartu peserta.' },

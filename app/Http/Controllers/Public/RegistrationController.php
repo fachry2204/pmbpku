@@ -30,9 +30,12 @@ class RegistrationController extends Controller
     {
         $channels = [];
         $paymentError = null;
+        $registrationOpen = (bool) $settings->get('registration.open', true);
         $amount = (int) $settings->get('pmb.registration_fee', 250000);
         try {
+            if ($registrationOpen) {
             $channels = Cache::remember('payment.channels.'.$gateway->provider().'.'.$gateway->mode().'.'.$amount, 300, fn () => $gateway->channels($amount));
+            }
         } catch (Throwable $exception) {
             report($exception);
             $message = $exception->getMessage();
@@ -46,6 +49,7 @@ class RegistrationController extends Controller
             'paymentError' => $paymentError,
             'registrationFee' => $amount,
             'documentUploadEnabled' => ! $settings->get('registration.document_upload_disabled', false),
+            'registrationOpen' => $registrationOpen,
         ]);
     }
 

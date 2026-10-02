@@ -12,6 +12,7 @@ use App\Http\Controllers\Webhooks\DuitkuWebhookController;
 use App\Http\Controllers\Webhooks\MidtransWebhookController;
 use App\Http\Controllers\Webhooks\MayarWebhookController;
 use App\Http\Controllers\Webhooks\TripayWebhookController;
+use App\Http\Middleware\EnsureRegistrationIsOpen;
 use App\Services\SettingsService;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -26,7 +27,7 @@ Route::get('/syarat-dan-ketentuan', function () {
 })->name('terms');
 Route::get('/health', HealthController::class)->middleware('throttle:30,1')->name('health');
 Route::get('/pendaftaran', [RegistrationController::class, 'create'])->name('registration.create');
-Route::post('/pendaftaran', [RegistrationController::class, 'store'])->middleware('throttle:5,1')->name('registration.store');
+Route::post('/pendaftaran', [RegistrationController::class, 'store'])->middleware(['throttle:5,1', EnsureRegistrationIsOpen::class])->name('registration.store');
 Route::get('/pendaftaran/{registrationNumber}/berhasil', [RegistrationController::class, 'success'])->name('registration.success');
 Route::get('/pembayaran/{registrationNumber}', [PaymentController::class, 'show'])->name('payment.show');
 Route::get('/pembayaran/mayar-link/proses', [PaymentController::class, 'mayarLinkPending'])->name('payment.mayar-link.pending');
