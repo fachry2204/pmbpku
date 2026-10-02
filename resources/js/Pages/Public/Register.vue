@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {Head,Link,useForm,usePage} from '@inertiajs/vue3';import {computed,nextTick,onMounted,ref,watch} from 'vue';
+import {Head,Link,router,useForm,usePage} from '@inertiajs/vue3';import {computed,nextTick,onMounted,onUnmounted,ref,watch} from 'vue';
 const props=defineProps<{channels:any[],paymentError:string|null,registrationFee:number,documentUploadEnabled:boolean}>();
 const step=ref(1);
 const restored=ref(false);
@@ -10,6 +10,8 @@ const submitStatus=ref('');
 const errorModal=ref<{title:string,message:string,tone?:'error'|'notice'}|null>(null);
 let submissionTimeout: ReturnType<typeof setTimeout>|null=null;
 let submissionProgressNotice: ReturnType<typeof setTimeout>|null=null;
+let removeInvalidListener:(()=>void)|null=null;
+let removeExceptionListener:(()=>void)|null=null;
 const page=usePage();
 const DRAFT_KEY='pmb-registration-draft-v1';
 const form=useForm({submission_uuid:crypto.randomUUID() as string,full_name:'',birth_place:'',birth_date:'',address:'',whatsapp:'',email:'',consent:false,recommendation_letter:null as File|null,diploma:null as File|null,photo_4x6:null as File|null,identity_card:null as File|null,pddikti_screenshot:null as File|null});
@@ -34,7 +36,11 @@ const selectFile=(key:typeof docs[number][0],event:Event)=>{const input=event.ta
 const maskDate=(event:Event)=>{const input=event.target as HTMLInputElement;const digits=input.value.replace(/\D/g,'').slice(0,8);input.value=digits.length>4?`${digits.slice(0,2)}/${digits.slice(2,4)}/${digits.slice(4)}`:digits.length>2?`${digits.slice(0,2)}/${digits.slice(2)}`:digits;form.birth_date=input.value;};
 const draftFields=['submission_uuid','full_name','birth_place','birth_date','address','whatsapp','email'] as const;
 const saveDraft=()=>{const data=Object.fromEntries(draftFields.map(key=>[key,form[key]]));localStorage.setItem(DRAFT_KEY,JSON.stringify({data,step:step.value}));};
-onMounted(()=>{try{const draft=JSON.parse(localStorage.getItem(DRAFT_KEY)||'null');if(draft?.data){draftFields.forEach(key=>{if(typeof draft.data[key]==='string')form[key]=draft.data[key]});restored.value=true;step.value=draft.step>=2&&dataReady.value?2:1;}}catch{localStorage.removeItem(DRAFT_KEY);}const parameters=new URLSearchParams(window.location.search);if(parameters.get('upload_error')==='server_limit'){void showError('Server belum dapat menerima semua dokumen sekaligus. Setiap dokumen boleh maksimal 10 MB. Coba ulangi pengiriman; bila masalah berulang, hubungi panitia.','Dokumen belum dapat diunggah');window.history.replaceState({},'',window.location.pathname);}});
+onMounted(()=>{try{const draft=JSON.parse(localStorage.getItem(DRAFT_KEY)||'null');if(draft?.data){draftFields.forEach(key=>{if(typeof draft.data[key]==='string')form[key]=draft.data[key]});restored.value=true;step.value=draft.step>=2&&dataReady.value?2:1;}}catch{localStorage.removeItem(DRAFT_KEY);}const parameters=new URLSearchParams(window.location.search);if(parameters.get('upload_error')==='server_limit'){void showError('Server belum dapat menerima semua dokumen sekaligus. Setiap dokumen boleh maksimal 10 MB. Coba ulangi pengiriman; bila masalah berulang, hubungi panitia.','Dokumen belum dapat diunggah');window.history.replaceState({},'',window.location.pathname);}
+  removeInvalidListener=router.on('invalid',(event)=>{if(!isSubmitting.value)return;event.preventDefault();const response=event.detail.response;const status=response.status;const message=status===413?'Total ukuran kiriman dokumen melampaui batas yang dapat diterima server. Setiap file tetap dibatasi maksimal 10 MB; coba kompres dokumen atau kirim file yang ukurannya lebih kecil.':status===419?'Sesi pendaftaran telah berakhir. Muat ulang halaman, pilih kembali dokumen, lalu kirim pendaftaran.':status>=500?'Server mengalami kendala saat menyimpan pendaftaran. Data belum dapat dipastikan tersimpan. Tunggu sebentar lalu cek status pendaftaran sebelum mencoba kembali.':'Server menolak kiriman pendaftaran (HTTP '+status+'). Periksa koneksi dan data, lalu coba lagi.';void showError(message,status===413?'Ukuran kiriman terlalu besar':status>=500?'Server sedang bermasalah':'Pendaftaran belum dapat diproses');});
+  removeExceptionListener=router.on('exception',(event)=>{if(!isSubmitting.value)return;event.preventDefault();void showError('Koneksi terputus atau server tidak memberikan respons. Data mungkin belum tersimpan. Periksa koneksi, tunggu sebentar, lalu cek status pendaftaran sebelum mengirim ulang.','Pengiriman terganggu');});
+});
+onUnmounted(()=>{removeInvalidListener?.();removeExceptionListener?.();clearSubmissionTimers();});
 watch(()=>((page.props as any).flash?.error as string|undefined),(message)=>{if(message)void showError(message);},{immediate:true});
 watch([step,...draftFields.map(key=>()=>form[key])],saveDraft);
 const submit=()=>{
