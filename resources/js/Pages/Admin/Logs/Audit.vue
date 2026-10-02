@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { reactive } from 'vue';
 
@@ -14,11 +13,10 @@ const iconPath = (tone:string) => ({ blue:'M12 2a7 7 0 0 0-7 7v10a3 3 0 0 0 3 3h
 
 <template>
   <Head title="Audit Log" />
-  <AdminLayout>
-    <main class="min-h-screen px-4 py-7 sm:px-7 lg:px-9"><section class="mx-auto max-w-[1440px]">
+  <main class="min-h-screen px-4 py-7 sm:px-7 lg:px-9"><section class="mx-auto max-w-[1440px]">
       <Link href="/admin/dashboard" class="inline-flex items-center gap-1 text-sm font-semibold text-amber-300 hover:text-amber-200">← Dashboard</Link>
       <div class="mt-2 flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><h1 class="text-3xl font-bold tracking-tight text-white">Riwayat aktivitas</h1><p class="mt-1 text-sm text-emerald-50">Pantau perubahan data, akses dokumen, dan aktivitas administrator dalam satu tempat.</p></div><div class="rounded-xl border border-emerald-200/25 bg-emerald-950/25 px-4 py-2 text-sm text-emerald-50"><b class="text-white">{{ logs.total }}</b> aktivitas tercatat</div></div>
-      <form class="mt-6 grid gap-3 rounded-2xl bg-white p-4 shadow-xl shadow-emerald-950/15 md:grid-cols-2 xl:grid-cols-[minmax(260px,1fr)_220px_190px_175px_auto]" @submit.prevent="apply">
+      <form class="mt-6 grid gap-3 rounded-2xl bg-white p-4 shadow-xl shadow-emerald-950/15 md:grid-cols-2 xl:grid-cols-[minmax(220px,1.4fr)_minmax(170px,1fr)_minmax(150px,.9fr)_minmax(155px,.9fr)_auto]" @submit.prevent="apply">
         <label class="relative block"><span class="sr-only">Cari aktivitas</span><svg class="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input v-model="form.search" class="w-full rounded-xl border-slate-200 py-3 pl-9 pr-3 text-sm focus:border-emerald-600 focus:ring-emerald-600" placeholder="Cari admin, pendaftar, atau dokumen" /></label>
         <select v-model="form.action" class="rounded-xl border-slate-200 py-3 text-sm focus:border-emerald-600 focus:ring-emerald-600" @change="apply"><option value="">Semua aktivitas</option><option v-for="item in actions" :key="item.value" :value="item.value">{{ item.label }}</option></select>
         <select v-model="form.actor" class="rounded-xl border-slate-200 py-3 text-sm focus:border-emerald-600 focus:ring-emerald-600" @change="apply"><option value="">Semua pelaksana</option><option v-for="actor in actors" :key="actor.id" :value="String(actor.id)">{{ actor.name }}</option></select>
@@ -31,7 +29,6 @@ const iconPath = (tone:string) => ({ blue:'M12 2a7 7 0 0 0-7 7v10a3 3 0 0 0 3 3h
         <nav v-if="logs.links.length > 3" class="flex flex-wrap items-center justify-center gap-1 border-t border-slate-100 px-4 py-4"><template v-for="(link, index) in logs.links" :key="index"><span v-if="!link.url" class="px-2 py-1 text-sm text-slate-400" v-html="link.label"/><Link v-else :href="link.url" :class="link.active ? 'bg-[#087154] text-white' : 'text-slate-600 hover:bg-emerald-50'" class="rounded-lg px-3 py-1.5 text-sm font-semibold" preserve-scroll v-html="link.label" /></template></nav>
       </div>
     </section></main>
-  </AdminLayout>
 </template>
 
 <style scoped>
