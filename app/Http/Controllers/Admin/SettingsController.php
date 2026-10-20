@@ -177,9 +177,10 @@ class SettingsController extends Controller
         $weightKeys = ['scores_weight_1', 'scores_weight_2', 'scores_weight_3', 'scores_weight_4'];
         if (collect($weightKeys)->contains(fn (string $key) => array_key_exists($key, $data))) {
             $defaultWeights = [25, 10, 50, 15];
-            $weightTotal = collect($weightKeys)->values()->sum(function (string $key, int $index) use ($data, $settings, $defaultWeights): int {
-                return (int) ($data[$key] ?? $settings->get('scores.weight_'.($index + 1), $defaultWeights[$index]));
-            });
+            $weightTotal = 0;
+            foreach ($weightKeys as $index => $key) {
+                $weightTotal += (int) ($data[$key] ?? $settings->get('scores.weight_'.($index + 1), $defaultWeights[$index]));
+            }
 
             if ($weightTotal !== 100) {
                 throw ValidationException::withMessages(['scores_weights' => 'Total bobot semua komponen harus tepat 100%. Saat ini jumlahnya '.$weightTotal.'%.']);
