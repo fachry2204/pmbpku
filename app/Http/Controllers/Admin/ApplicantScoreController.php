@@ -15,7 +15,7 @@ use Inertia\Response;
 
 class ApplicantScoreController extends Controller
 {
-    private const SCORE_WEIGHTS = [25, 10, 50, 15];
+    private const DEFAULT_SCORE_WEIGHTS = [25, 10, 50, 15];
 
     private const SCOREABLE_STATUSES = [
         SelectionStatus::AttendingTest->value,
@@ -24,6 +24,9 @@ class ApplicantScoreController extends Controller
 
     public function index(Request $request, SettingsService $settings): Response
     {
+        $scoreWeights = collect(range(1, 4))->map(
+            fn (int $number) => (int) $settings->get("scores.weight_{$number}", self::DEFAULT_SCORE_WEIGHTS[$number - 1])
+        )->all();
         $query = Applicant::with('score')->whereIn('selection_status', self::SCOREABLE_STATUSES);
         if ($search = $request->string('search')->trim()->toString()) {
             $query->where(fn ($q) => $q->where('full_name', 'like', "%{$search}%")->orWhere('registration_number', 'like', "%{$search}%"));
@@ -32,12 +35,12 @@ class ApplicantScoreController extends Controller
             $query->whereHas('admissionPeriod', fn ($period) => $period->where('year', $request->integer('registration_year')));
         }
 
-        $applicants = $query->orderBy('full_name')->paginate(25)->withQueryString()->through(function (Applicant $applicant) {
+        $applicants = $query->orderBy('full_name')->paginate(25)->withQueryString()->through(function (Applicant $applicant) use ($scoreWeights) {
             $scores = collect([$applicant->score?->score_1, $applicant->score?->score_2, $applicant->score?->score_3, $applicant->score?->score_4]);
             $finalScore = $scores->contains(null)
                 ? null
                 : $scores->values()->reduce(
-                    fn (float $total, mixed $score, int $index) => $total + ((float) $score * self::SCORE_WEIGHTS[$index] / 100),
+                    fn (float $total, mixed $score, int $index) => $total + ((float) $score * $scoreWeights[$index] / 100),
                     0.0
                 );
 
@@ -60,7 +63,7 @@ class ApplicantScoreController extends Controller
             'scoreLabels' => collect(range(1, 4))->map(
                 fn (int $number) => $settings->get("scores.label_{$number}", $this->defaultScoreLabels()[$number - 1])
             )->values(),
-            'scoreWeights' => self::SCORE_WEIGHTS,
+            'scoreWeights' => $scoreWeights,
         ]);
     }
 

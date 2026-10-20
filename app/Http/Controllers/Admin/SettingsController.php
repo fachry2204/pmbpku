@@ -28,6 +28,10 @@ class SettingsController extends Controller
         'scores.label_2' => ['string', false],
         'scores.label_3' => ['string', false],
         'scores.label_4' => ['string', false],
+        'scores.weight_1' => ['integer', false],
+        'scores.weight_2' => ['integer', false],
+        'scores.weight_3' => ['integer', false],
+        'scores.weight_4' => ['integer', false],
         'storage.google_drive_enabled' => ['boolean', false],
         'rclone.binary_path' => ['string', false],
         'rclone.remote' => ['string', false],
@@ -76,6 +80,10 @@ class SettingsController extends Controller
                 'scores.label_2' => 'Membaca Al Qur’an',
                 'scores.label_3' => 'Qiroatul Kutub & Muhadatsah Bahasa Arab',
                 'scores.label_4' => 'Wawancara',
+                'scores.weight_1' => 25,
+                'scores.weight_2' => 10,
+                'scores.weight_3' => 50,
+                'scores.weight_4' => 15,
                 'storage.google_drive_enabled' => false,
                 'rclone.binary_path' => '/usr/local/bin/rclone',
                 'rclone.remote' => 'gdrive',
@@ -124,11 +132,15 @@ class SettingsController extends Controller
             'pmb_registration_year' => ['sometimes', 'required', 'integer', 'min:2020', 'max:2100'],
             'pmb_selection_location' => ['sometimes', 'nullable', 'string', 'max:500'],
             'registration_document_upload_disabled' => ['required', 'boolean'],
-            'registration_open' => ['required', 'boolean'],
+            'registration_open' => ['sometimes', 'boolean'],
             'scores_label_1' => ['sometimes', 'required', 'string', 'max:80'],
             'scores_label_2' => ['sometimes', 'required', 'string', 'max:80'],
             'scores_label_3' => ['sometimes', 'required', 'string', 'max:80'],
             'scores_label_4' => ['sometimes', 'required', 'string', 'max:80'],
+            'scores_weight_1' => ['sometimes', 'required', 'integer', 'min:0', 'max:100'],
+            'scores_weight_2' => ['sometimes', 'required', 'integer', 'min:0', 'max:100'],
+            'scores_weight_3' => ['sometimes', 'required', 'integer', 'min:0', 'max:100'],
+            'scores_weight_4' => ['sometimes', 'required', 'integer', 'min:0', 'max:100'],
             'storage_google_drive_enabled' => ['sometimes', 'required', 'boolean'],
             'rclone_binary_path' => ['nullable', 'string', 'max:500'],
             'rclone_remote' => ['nullable', 'regex:/^[A-Za-z0-9_-]+$/', 'max:100'],
@@ -161,6 +173,18 @@ class SettingsController extends Controller
             'mail_from_address' => ['nullable', 'email', 'max:190'],
             'mail_from_name' => ['nullable', 'string', 'max:190'],
         ]);
+
+        $weightKeys = ['scores_weight_1', 'scores_weight_2', 'scores_weight_3', 'scores_weight_4'];
+        if (collect($weightKeys)->contains(fn (string $key) => array_key_exists($key, $data))) {
+            $defaultWeights = [25, 10, 50, 15];
+            $weightTotal = collect($weightKeys)->values()->sum(function (string $key, int $index) use ($data, $settings, $defaultWeights): int {
+                return (int) ($data[$key] ?? $settings->get('scores.weight_'.($index + 1), $defaultWeights[$index]));
+            });
+
+            if ($weightTotal !== 100) {
+                throw ValidationException::withMessages(['scores_weights' => 'Total bobot semua komponen harus tepat 100%. Saat ini jumlahnya '.$weightTotal.'%.']);
+            }
+        }
 
         foreach (self::KEYS as $key => [$type, $secret]) {
             $input = str_replace('.', '_', $key);

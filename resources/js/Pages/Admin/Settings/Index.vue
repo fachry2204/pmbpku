@@ -14,6 +14,7 @@ const mayarKeyForm = useForm<{ mayar_key_file: File | null }>({ mayar_key_file: 
 const mayarKeyFileName = ref('');
 const copied = ref('');
 const activeTab = ref<TabKey>('registration');
+const scoreWeightTotal = computed(() => [1, 2, 3, 4].reduce((total, number) => total + (Number(form[`scores_weight_${number}`]) || 0), 0));
 const tabs: { key: TabKey; label: string; description: string }[] = [
   { key: 'registration', label: 'Pendaftaran', description: 'Biaya & formulir' },
   { key: 'subjects', label: 'Mapel', description: 'Nama kolom nilai' },
@@ -35,11 +36,15 @@ const sections = computed<Section[]>(() => [
     { key: 'pmb_selection_location', label: 'Lokasi Seleksi', type: 'text', hint: 'Lokasi ini otomatis disimpan ke jadwal seleksi baru dan ditampilkan pada status serta kartu peserta.' },
     { key: 'registration_document_upload_disabled', label: 'Nonaktifkan Upload Dokumen', type: 'toggle', hint: 'Jika aktif, langkah upload dokumen disembunyikan dan dokumen tidak wajib. Jika nonaktif, semua dokumen wajib diunggah.' },
   ]},
-  { tab: 'subjects', title: 'Mapel / Komponen Nilai', description: 'Ubah nama empat kolom nilai tanpa mengubah atau menghapus nilai pendaftar yang sudah tersimpan.', accent: 'bg-cyan-50 text-cyan-700', icon: 'N', fields: [
-    { key: 'scores_label_1', label: 'Komponen Nilai 1 · Bobot 25%', type: 'text', hint: 'Default: Tes Tulis Wawasan Keislaman.' },
-    { key: 'scores_label_2', label: 'Komponen Nilai 2 · Bobot 10%', type: 'text', hint: 'Default: Membaca Al Qur’an.' },
-    { key: 'scores_label_3', label: 'Komponen Nilai 3 · Bobot 50%', type: 'text', hint: 'Default: Qiroatul Kutub & Muhadatsah Bahasa Arab.' },
-    { key: 'scores_label_4', label: 'Komponen Nilai 4 · Bobot 15%', type: 'text', hint: 'Default: Wawancara. Mengubah nama tidak mengubah bobot.' },
+  { tab: 'subjects', title: 'Mapel / Komponen Nilai', description: 'Atur nama dan bobot empat komponen. Total bobot harus tepat 100%; perubahan bobot akan digunakan pada perhitungan nilai akhir.', accent: 'bg-cyan-50 text-cyan-700', icon: 'N', fields: [
+    { key: 'scores_label_1', label: 'Nama Komponen Nilai 1', type: 'text', hint: 'Default: Tes Tulis Wawasan Keislaman.' },
+    { key: 'scores_weight_1', label: 'Bobot Komponen Nilai 1 (%)', type: 'number', hint: 'Bobot yang digunakan untuk menghitung nilai akhir.' },
+    { key: 'scores_label_2', label: 'Nama Komponen Nilai 2', type: 'text', hint: 'Default: Membaca Al Qur’an.' },
+    { key: 'scores_weight_2', label: 'Bobot Komponen Nilai 2 (%)', type: 'number', hint: 'Bobot yang digunakan untuk menghitung nilai akhir.' },
+    { key: 'scores_label_3', label: 'Nama Komponen Nilai 3', type: 'text', hint: 'Default: Qiroatul Kutub & Muhadatsah Bahasa Arab.' },
+    { key: 'scores_weight_3', label: 'Bobot Komponen Nilai 3 (%)', type: 'number', hint: 'Bobot yang digunakan untuk menghitung nilai akhir.' },
+    { key: 'scores_label_4', label: 'Nama Komponen Nilai 4', type: 'text', hint: 'Default: Wawancara.' },
+    { key: 'scores_weight_4', label: 'Bobot Komponen Nilai 4 (%)', type: 'number', hint: 'Bobot yang digunakan untuk menghitung nilai akhir.' },
   ]},
   { tab: 'payment', title: 'Payment Gateway', description: 'Konfigurasi lingkungan dan kredensial pembayaran otomatis.', accent: 'bg-blue-50 text-blue-700', icon: 'PG', fields: [
     { key: 'payment_provider', label: 'Penyedia Payment Gateway', type: 'provider', hint: 'Pilih satu provider yang digunakan pada halaman pendaftaran.' },
@@ -134,6 +139,10 @@ const uploadMayarKey = () => {
         </div>
         <div v-if="Object.keys(form.errors).length" class="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           <b>Pengaturan belum tersimpan.</b> Periksa kolom yang ditandai merah di bawah, lalu simpan kembali.
+        </div>
+        <div v-if="activeTab === 'subjects'" class="rounded-2xl border p-4 text-sm font-semibold" :class="scoreWeightTotal === 100 ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-amber-300 bg-amber-50 text-amber-900'">
+          Total bobot saat ini: {{ scoreWeightTotal }}% <span v-if="scoreWeightTotal === 100">· Siap disimpan</span><span v-else>· Sesuaikan bobot hingga totalnya 100%</span>
+          <p v-if="form.errors.scores_weights" class="mt-1 text-red-700">{{ form.errors.scores_weights }}</p>
         </div>
         <section v-for="section in visibleSections" :key="section.title" class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <header class="flex items-start gap-4 border-b border-slate-100 px-6 py-5">
